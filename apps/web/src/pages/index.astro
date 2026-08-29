@@ -1,5 +1,9 @@
 ---
-import { SEED_SHOP_ID } from "@liteshop/core";
+import { formatPln, SEED_SHOP_ID } from "@liteshop/core";
+import { createServices } from "../lib/core.ts";
+
+const { products } = createServices();
+const listed = await products.listActive(SEED_SHOP_ID);
 ---
 <html lang="pl">
   <head>
@@ -8,6 +12,15 @@ import { SEED_SHOP_ID } from "@liteshop/core";
   </head>
   <body>
     <h1>LiteShop</h1>
-    <p>shop {SEED_SHOP_ID}</p>
+    <p><a href="/cart">Koszyk</a></p>
+    <ul>
+      {listed.map((product) => (
+        <li>
+          <a href={`/products/${product.slug}`}>{product.name}</a>
+          {" "}
+          {formatPln(product.price)}
+        </li>
+      ))}
+    </ul>
   </body>
 </html>

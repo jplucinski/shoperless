@@ -1,0 +1,22 @@
+---
+import { formatPln, SEED_SHOP_ID } from "@liteshop/core";
+import { createServices } from "../../../lib/core.ts";
+
+const { products } = createServices();
+const listed = await products.list(SEED_SHOP_ID);
+---
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Produkty</title>
+  </head>
+  <body>
+    <p><a href="/admin">Dashboard</a></p>
+    <h1>Produkty</h1>
+    <ul>
+      {listed.map((product) => (
+        <li>{product.sku} — {product.name} — {formatPln(product.price)} — {product.status}</li>
+      ))}
+    </ul>
+  </body>
+</html>

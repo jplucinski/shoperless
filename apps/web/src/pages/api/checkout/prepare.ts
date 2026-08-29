@@ -2,8 +2,8 @@ import type { APIRoute } from "astro";
 import { SEED_SHOP_ID } from "@liteshop/core";
 import { toCheckoutCartData } from "@liteshop/furgonetka";
 import { z } from "zod";
-import { createServices } from "../../lib/core.ts";
-import { toHttpError } from "../../lib/http.ts";
+import { createServices } from "../../../lib/core.ts";
+import { toHttpError } from "../../../lib/http.ts";
 
 const bodySchema = z.object({
   items: z.array(

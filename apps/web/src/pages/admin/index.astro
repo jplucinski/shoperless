@@ -1,0 +1,32 @@
+---
+import { SEED_SHOP_ID, available } from "@liteshop/core";
+import { createServices } from "../../lib/core.ts";
+
+const { orders, products, stock } = createServices();
+const listed = await orders.list(SEED_SHOP_ID);
+const catalog = await products.list(SEED_SHOP_ID);
+const todayCount = listed.length;
+const unpaid = listed.filter((o) => o.paymentStatus !== "PAID").length;
+let lowStock = 0;
+for (const product of catalog) {
+  const inv = await stock.get(SEED_SHOP_ID, product.sku);
+  if (available(inv) < 5) lowStock += 1;
+}
+---
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Admin</title>
+  </head>
+  <body>
+    <h1>Dashboard</h1>
+    <ul>
+      <li>Zamówienia: {todayCount}</li>
+      <li>Nieopłacone: {unpaid}</li>
+      <li>Niski stan: {lowStock}</li>
+    </ul>
+    <p><a href="/admin/orders">Zamówienia</a></p>
+    <p><a href="/admin/products">Produkty</a></p>
+    <p><a href="/admin/inventory">Magazyn</a></p>
+  </body>
+</html>

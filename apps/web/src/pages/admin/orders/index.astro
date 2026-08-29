@@ -1,0 +1,37 @@
+---
+import { formatPln, SEED_SHOP_ID } from "@liteshop/core";
+import { createServices } from "../../../lib/core.ts";
+
+const { orders } = createServices();
+const listed = await orders.list(SEED_SHOP_ID);
+---
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zamówienia</title>
+  </head>
+  <body>
+    <p><a href="/admin">Dashboard</a></p>
+    <h1>Zamówienia</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>id</th>
+          <th>płatność</th>
+          <th>wysyłka</th>
+          <th>suma</th>
+        </tr>
+      </thead>
+      <tbody>
+        {listed.map((order) => (
+          <tr>
+            <td><a href={`/admin/orders/${order.id}`}>{order.id}</a></td>
+            <td>{order.paymentStatus}</td>
+            <td>{order.shippingStatus}</td>
+            <td>{formatPln(order.total)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </body>
+</html>

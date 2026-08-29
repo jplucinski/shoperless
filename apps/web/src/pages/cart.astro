@@ -1,0 +1,26 @@
+---
+import { CheckoutButton } from "../islands/CheckoutButton.tsx";
+---
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Koszyk</title>
+    <script src="https://furgonetka.pl/js/dist/checkout/universal-checkout-sandbox.js" defer></script>
+  </head>
+  <body>
+    <p><a href="/">Sklep</a></p>
+    <h1>Koszyk</h1>
+    <ul id="cart-lines"></ul>
+    <CheckoutButton client:load />
+    <script is:inline>
+      const raw = localStorage.getItem("liteshop.cart");
+      const items = raw ? JSON.parse(raw).items ?? [] : [];
+      const list = document.getElementById("cart-lines");
+      for (const item of items) {
+        const li = document.createElement("li");
+        li.textContent = item.sku + " × " + item.quantity;
+        list.appendChild(li);
+      }
+    </script>
+  </body>
+</html>

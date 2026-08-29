@@ -52,6 +52,10 @@ export class ProductService {
     return all.filter((p) => p.status === "active");
   }
 
+  async list(shopId: ShopId): Promise<Product[]> {
+    return this.deps.products.list(shopId);
+  }
+
   async getActiveBySlug(shopId: ShopId, slug: string): Promise<Product> {
     const product = await this.deps.products.getBySlug(shopId, slug);
     if (!product) {

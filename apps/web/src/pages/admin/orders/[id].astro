@@ -1,0 +1,33 @@
+---
+import { formatPln, SEED_SHOP_ID } from "@liteshop/core";
+import { furgonetkaOrderUrl } from "@liteshop/furgonetka";
+import { createServices } from "../../../../lib/core.ts";
+
+const id = Astro.params.id;
+if (!id) {
+  return new Response("Not found", { status: 404 });
+}
+const { orders } = createServices();
+const order = await orders.get(SEED_SHOP_ID, id);
+---
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zamówienie {order.id}</title>
+  </head>
+  <body>
+    <p><a href="/admin/orders">Zamówienia</a></p>
+    <h1>{order.id}</h1>
+    <p>Płatność: {order.paymentStatus}</p>
+    <p>Wysyłka: {order.shippingStatus}</p>
+    <ul>
+      {order.items.map((item) => (
+        <li>{item.sku} × {item.quantity} @ {formatPln(item.unitPrice)}</li>
+      ))}
+    </ul>
+    <p>Suma: {formatPln(order.total)}</p>
+    <p>
+      <a href={furgonetkaOrderUrl(order.externalOrderId)}>Otwórz w Furgonetce</a>
+    </p>
+  </body>
+</html>

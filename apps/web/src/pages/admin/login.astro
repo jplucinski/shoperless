@@ -1,0 +1,22 @@
+---
+const isDev = import.meta.env.DEV;
+---
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <title>Logowanie</title>
+  </head>
+  <body>
+    <h1>Admin</h1>
+    <p><a href="/api/admin/furgonetka/start">Zaloguj przez Furgonetkę</a></p>
+    {isDev && (
+      <form method="post" action="/api/admin/login">
+        <label>
+          Hasło
+          <input type="password" name="password" />
+        </label>
+        <button type="submit">Zaloguj hasłem</button>
+      </form>
+    )}
+  </body>
+</html>

@@ -29,6 +29,10 @@ export const keys = {
     sk: `RESERVATION#${orderId}`,
     gsi1pk: `SHOP#${shopId}#RESERVATION`,
   }),
+  furgonetka: (shopId: string) => ({
+    pk: `SHOP#${shopId}`,
+    sk: "FURGONETKA",
+  }),
 };
 
 export const RESERVE_CONDITION =

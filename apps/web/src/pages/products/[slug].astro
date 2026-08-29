@@ -1,0 +1,33 @@
+---
+import { formatPln, ProductInactiveError, ProductNotFoundError, SEED_SHOP_ID } from "@liteshop/core";
+import { CartButton } from "../../islands/CartButton.tsx";
+import { createServices } from "../../lib/core.ts";
+
+const slug = Astro.params.slug;
+if (!slug) {
+  return new Response("Not found", { status: 404 });
+}
+const { products } = createServices();
+let product;
+try {
+  product = await products.getActiveBySlug(SEED_SHOP_ID, slug);
+} catch (error) {
+  if (error instanceof ProductNotFoundError || error instanceof ProductInactiveError) {
+    return new Response("Not found", { status: 404 });
+  }
+  throw error;
+}
+---
+<html lang="pl">
+  <head>
+    <meta charset="utf-8" />
+    <title>{product.name}</title>
+  </head>
+  <body>
+    <p><a href="/">Sklep</a></p>
+    <h1>{product.name}</h1>
+    <p>{product.description}</p>
+    <p>{formatPln(product.price)}</p>
+    <CartButton client:load sku={product.sku} />
+  </body>
+</html>

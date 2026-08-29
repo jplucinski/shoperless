@@ -11,6 +11,10 @@ export default $config({
   },
   async run() {
     const koszykSharedKey = new sst.Secret("KoszykSharedKey");
+    const adminPassword = new sst.Secret("AdminPassword");
+    const furgonetkaClientId = new sst.Secret("FurgonetkaClientId");
+    const furgonetkaClientSecret = new sst.Secret("FurgonetkaClientSecret");
+    const tokenEncryptionKey = new sst.Secret("TokenEncryptionKey");
 
     const table = new sst.aws.Dynamo("Table", {
       fields: {
@@ -31,14 +35,22 @@ export default $config({
 
     const web = new sst.aws.Astro("Web", {
       path: "apps/web",
-      link: [table, images, koszykSharedKey],
+      link: [
+        table,
+        images,
+        koszykSharedKey,
+        adminPassword,
+        furgonetkaClientId,
+        furgonetkaClientSecret,
+        tokenEncryptionKey,
+      ],
     });
 
     new sst.aws.Cron("ReservationExpiry", {
       schedule: "rate(5 minutes)",
       job: {
         handler: "apps/web/src/jobs/release-expired-reservations.handler",
-        link: [table],
+        link: [table, koszykSharedKey, adminPassword],
       },
     });
 

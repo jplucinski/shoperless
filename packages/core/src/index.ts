@@ -17,6 +17,10 @@ export {
   ProductInactiveError,
   InsufficientStockError,
 } from "./errors.ts";
+export type { Product, ProductStatus } from "./product/product.ts";
+export type { ProductRepository } from "./product/product-repository.ts";
+export { MemoryProductRepository } from "./product/memory-product-repository.ts";
+export { ProductService } from "./product/product-service.ts";
 export {
   available,
   type Inventory,
@@ -54,3 +58,4 @@ export { keys, RESERVE_CONDITION } from "./dynamo/keys.ts";
 export { DynamoProductRepository } from "./dynamo/dynamo-product-repository.ts";
 export { DynamoInventoryRepository } from "./dynamo/dynamo-inventory-repository.ts";
 export { DynamoOrderRepository } from "./dynamo/dynamo-order-repository.ts";
+export type { FurgonetkaConnection } from "./connection/furgonetka-connection.ts";

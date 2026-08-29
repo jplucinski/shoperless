@@ -25,6 +25,17 @@ export class InventoryService {
     this.reservationTtlMs = deps.reservationTtlMs ?? DEFAULT_RESERVATION_TTL_MS;
   }
 
+  async get(shopId: ShopId, sku: Sku): Promise<Inventory> {
+    return (
+      (await this.repo.get(shopId, sku)) ?? {
+        shopId,
+        sku,
+        onHand: 0,
+        reserved: 0,
+      }
+    );
+  }
+
   async applyDelivery(shopId: ShopId, sku: Sku, quantity: number): Promise<Inventory> {
     if (quantity <= 0) {
       throw new DomainError("INVALID_QUANTITY", "delivery quantity must be positive");
