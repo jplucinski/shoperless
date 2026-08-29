@@ -1,0 +1,23 @@
+{
+  "name": "@liteshop/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@liteshop/core": "workspace:*",
+    "@liteshop/furgonetka": "workspace:*",
+    "@liteshop/ui": "workspace:*",
+    "astro": "^5.1.8",
+    "astro-sst": "^3.1.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "typescript": "^5.6.3"
+  }
+}
