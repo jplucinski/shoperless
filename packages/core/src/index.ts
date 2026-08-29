@@ -50,3 +50,7 @@ export {
   type CommerceLog,
   type Logger,
 } from "./logging.ts";
+export { keys, RESERVE_CONDITION } from "./dynamo/keys.ts";
+export { DynamoProductRepository } from "./dynamo/dynamo-product-repository.ts";
+export { DynamoInventoryRepository } from "./dynamo/dynamo-inventory-repository.ts";
+export { DynamoOrderRepository } from "./dynamo/dynamo-order-repository.ts";

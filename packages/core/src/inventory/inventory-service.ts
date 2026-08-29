@@ -95,8 +95,6 @@ export class InventoryService {
       }
       const existing = await this.repo.getReservation(shopId, orderId);
       if (existing) return existing;
-      current.reserved += quantity;
-      await this.repo.save(current);
       const reservation: Reservation = {
         shopId,
         orderId,
@@ -105,17 +103,33 @@ export class InventoryService {
         status: "open",
         expiresAt: new Date(this.clock.now().getTime() + this.reservationTtlMs),
       };
-      await this.repo.saveReservation(reservation);
-      await this.repo.appendEvent({
+      const event = {
         id: this.ids.eventId(),
         shopId,
         sku,
         deltaOnHand: 0,
         deltaReserved: quantity,
-        reason: "RESERVATION",
+        reason: "RESERVATION" as const,
         orderId,
         createdAt: this.clock.now(),
-      });
+      };
+      if (this.repo.transactReserve) {
+        try {
+          await this.repo.transactReserve({
+            inventory: current,
+            quantity,
+            reservation,
+            event,
+          });
+        } catch {
+          throw new InsufficientStockError(sku, quantity);
+        }
+        return reservation;
+      }
+      current.reserved += quantity;
+      await this.repo.save(current);
+      await this.repo.saveReservation(reservation);
+      await this.repo.appendEvent(event);
       return reservation;
     };
     const previous = this.locks.get(mutexKey) ?? Promise.resolve();

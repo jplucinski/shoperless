@@ -7,17 +7,28 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "typecheck": "astro check"
+    "typecheck": "astro check",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@astrojs/react": "^4.2.1",
     "@liteshop/core": "workspace:*",
     "@liteshop/furgonetka": "workspace:*",
     "@liteshop/ui": "workspace:*",
     "astro": "^5.1.8",
-    "astro-sst": "^3.1.4"
+    "astro-sst": "^3.1.4",
+    "@aws-sdk/client-dynamodb": "^3.700.0",
+    "@aws-sdk/lib-dynamodb": "^3.700.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sst": "^3.17.10",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "typescript": "^5.6.3"
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "typescript": "^5.6.3",
+    "vitest": "^3.0.5"
   }
 }

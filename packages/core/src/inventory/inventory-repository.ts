@@ -9,4 +9,10 @@ export interface InventoryRepository {
   getReservation(shopId: ShopId, orderId: OrderId): Promise<Reservation | undefined>;
   saveReservation(reservation: Reservation): Promise<void>;
   listOpenExpired(shopId: ShopId, now: Date): Promise<Reservation[]>;
+  transactReserve?(input: {
+    inventory: Inventory;
+    quantity: number;
+    reservation: Reservation;
+    event: InventoryEvent;
+  }): Promise<void>;
 }
