@@ -1,26 +1,50 @@
 ---
-import { formatPln, SEED_SHOP_ID } from "@liteshop/core";
+import { formatPln, SEED_SHOP_ID, type Product } from "@liteshop/core";
+import ShopLayout from "../layouts/ShopLayout.astro";
+import { DEV_PREVIEW_PRODUCT } from "../lib/dev-preview-product.ts";
 import { createServices } from "../lib/core.ts";
 
-const { products } = createServices();
-const listed = await products.listActive(SEED_SHOP_ID);
+let listed: Product[] = [];
+let catalogError = false;
+try {
+  const { products } = createServices();
+  listed = await products.listActive(SEED_SHOP_ID);
+} catch {
+  catalogError = true;
+  if (import.meta.env.DEV) {
+    listed = [DEV_PREVIEW_PRODUCT];
+  }
+}
 ---
-<html lang="pl">
-  <head>
-    <meta charset="utf-8" />
-    <title>LiteShop</title>
-  </head>
-  <body>
-    <h1>LiteShop</h1>
-    <p><a href="/cart">Koszyk</a></p>
-    <ul>
-      {listed.map((product) => (
-        <li>
-          <a href={`/products/${product.slug}`}>{product.name}</a>
-          {" "}
-          {formatPln(product.price)}
-        </li>
-      ))}
-    </ul>
-  </body>
-</html>
+<ShopLayout title="LiteShop">
+  <p class="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-moss">Katalog</p>
+  <h1 class="font-display mb-8 max-w-xl text-4xl leading-tight font-medium">
+    Rzeczy do domu, bez szumu.
+  </h1>
+  {
+    catalogError && listed.length === 0 ? (
+      <p class="rounded-2xl border border-line bg-paper px-5 py-4 text-mute">
+        Katalog chwilowo niedostępny (Dynamo / SST).
+      </p>
+    ) : listed.length === 0 ? (
+      <p class="text-mute">Brak aktywnych produktów.</p>
+    ) : (
+      <ul class="m-0 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2">
+        {listed.map((product) => (
+          <li>
+            <a
+              href={`/products/${product.slug}`}
+              class="block rounded-2xl border border-line bg-paper p-5 no-underline shadow-[0_1px_0_rgba(26,22,20,0.04)] transition hover:-translate-y-0.5 hover:border-moss/40"
+            >
+              <div class="mb-4 flex h-36 items-end rounded-xl bg-[linear-gradient(160deg,#d7e0d4,#c5b7a5)] px-4 py-3">
+                <span class="font-display text-paper text-2xl">{product.name.slice(0, 1)}</span>
+              </div>
+              <h2 class="m-0 text-lg font-semibold text-ink">{product.name}</h2>
+              <p class="mt-1 mb-0 text-mute">{formatPln(product.price)}</p>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</ShopLayout>

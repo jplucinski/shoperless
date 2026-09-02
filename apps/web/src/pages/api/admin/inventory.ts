@@ -1,9 +1,8 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { SEED_SHOP_ID } from "@liteshop/core";
-import { Resource } from "sst";
 import { createServices } from "../../../lib/core.ts";
-import { isAdminSession, SESSION_COOKIE } from "../../../lib/session.ts";
+import { adminSecret, isAdminSession, SESSION_COOKIE } from "../../../lib/session.ts";
 
 const bodySchema = z.object({
   sku: z.string().min(1),
@@ -12,7 +11,7 @@ const bodySchema = z.object({
 });
 
 export const POST: APIRoute = async ({ request, cookies }) => {
-  if (!isAdminSession(cookies.get(SESSION_COOKIE)?.value, Resource.AdminPassword.value)) {
+  if (!isAdminSession(cookies.get(SESSION_COOKIE)?.value, adminSecret())) {
     return new Response("Unauthorized", { status: 401 });
   }
   const json: unknown = await request.json();

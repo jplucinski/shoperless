@@ -220,4 +220,8 @@ export class InventoryService {
     }
     return expired.length;
   }
+
+  async listEvents(shopId: ShopId, sku: Sku) {
+    return this.repo.listEvents(shopId, sku);
+  }
 }

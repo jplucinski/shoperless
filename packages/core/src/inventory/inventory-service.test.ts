@@ -85,4 +85,13 @@ describe("InventoryService", () => {
     expect(inv).toEqual({ shopId, sku, onHand: 10, reserved: 0 });
     expect(await stock.releaseExpired(shopId)).toBe(0);
   });
+
+  it("listEvents returns delivery then adjustment in order", async () => {
+    const stock = service();
+    await stock.applyDelivery(shopId, sku, 10);
+    await stock.applyAdjustment(shopId, sku, -2);
+    const events = await stock.listEvents(shopId, sku);
+    expect(events.map((event) => event.reason)).toEqual(["DELIVERY", "ADJUSTMENT"]);
+    expect(events.map((event) => event.deltaOnHand)).toEqual([10, -2]);
+  });
 });

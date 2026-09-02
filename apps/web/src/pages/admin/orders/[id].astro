@@ -1,33 +1,40 @@
 ---
 import { formatPln, SEED_SHOP_ID } from "@liteshop/core";
 import { furgonetkaOrderUrl } from "@liteshop/furgonetka";
-import { createServices } from "../../../../lib/core.ts";
+import AdminLayout from "../../../../layouts/AdminLayout.astro";
+import { runAdminQuery } from "../../../../lib/core.ts";
 
 const id = Astro.params.id;
 if (!id) {
   return new Response("Not found", { status: 404 });
 }
-const { orders } = createServices();
-const order = await orders.get(SEED_SHOP_ID, id);
+const order = await runAdminQuery((services) => services.orders.get(SEED_SHOP_ID, id));
+if (!order) {
+  return Astro.redirect("/admin/orders");
+}
 ---
-<html lang="pl">
-  <head>
-    <meta charset="utf-8" />
-    <title>Zamówienie {order.id}</title>
-  </head>
-  <body>
-    <p><a href="/admin/orders">Zamówienia</a></p>
-    <h1>{order.id}</h1>
-    <p>Płatność: {order.paymentStatus}</p>
-    <p>Wysyłka: {order.shippingStatus}</p>
-    <ul>
-      {order.items.map((item) => (
-        <li>{item.sku} × {item.quantity} @ {formatPln(item.unitPrice)}</li>
-      ))}
-    </ul>
-    <p>Suma: {formatPln(order.total)}</p>
-    <p>
-      <a href={furgonetkaOrderUrl(order.externalOrderId)}>Otwórz w Furgonetce</a>
-    </p>
-  </body>
-</html>
+<AdminLayout title={`Zamówienie ${order.id}`}>
+  <p class="mb-6">
+    <a href="/admin/orders" class="text-sm font-semibold text-mute no-underline hover:text-ink">
+      ← Zamówienia
+    </a>
+  </p>
+  <h1 class="font-display m-0 text-3xl font-medium">{order.id}</h1>
+  <p class="text-mute mt-2">
+    Płatność: {order.paymentStatus} · Wysyłka: {order.shippingStatus}
+  </p>
+  <ul class="mt-8 mb-6 list-none rounded-2xl border border-line bg-paper p-0">
+    {order.items.map((item) => (
+      <li class="flex justify-between gap-4 border-b border-line px-5 py-4 last:border-b-0">
+        <span>
+          {item.sku} × {item.quantity}
+        </span>
+        <span class="font-semibold">{formatPln(item.unitPrice)}</span>
+      </li>
+    ))}
+  </ul>
+  <p class="mb-8 text-xl font-semibold">Suma: {formatPln(order.total)}</p>
+  <a class="shop-btn no-underline" href={furgonetkaOrderUrl(order.externalOrderId)}>
+    Otwórz w Furgonetce
+  </a>
+</AdminLayout>

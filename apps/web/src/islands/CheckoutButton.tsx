@@ -1,9 +1,10 @@
 import { readCart } from "./cart-storage.ts";
 
-export function CheckoutButton() {
+export function CheckoutButton(props: { className?: string }) {
   return (
     <button
       type="button"
+      className={props.className ?? "shop-btn"}
       onClick={async () => {
         const items = readCart();
         const response = await fetch("/api/checkout/prepare", {

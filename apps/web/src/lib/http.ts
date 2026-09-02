@@ -10,6 +10,8 @@ export function toHttpError(error: unknown): {
       "PRODUCT_INACTIVE",
       "PRODUCT_NOT_FOUND",
       "INVALID_CART",
+      "DUPLICATE_SKU",
+      "DUPLICATE_SLUG",
     ]);
     if (conflict.has(error.code)) {
       return { status: 409, body: { code: error.code, message: error.message } };

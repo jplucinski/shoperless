@@ -47,6 +47,16 @@ export class ProductService {
     return product;
   }
 
+  async setStatus(shopId: ShopId, sku: string, status: ProductStatus): Promise<Product> {
+    const product = await this.deps.products.getBySku(shopId, sku);
+    if (!product) {
+      throw new ProductNotFoundError(sku);
+    }
+    product.status = status;
+    await this.deps.products.save(product);
+    return product;
+  }
+
   async listActive(shopId: ShopId): Promise<Product[]> {
     const all = await this.deps.products.list(shopId);
     return all.filter((p) => p.status === "active");

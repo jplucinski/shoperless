@@ -1,67 +1,115 @@
 ---
 import { SEED_SHOP_ID, available } from "@liteshop/core";
-import { createServices } from "../../../lib/core.ts";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { runAdminQuery } from "../../../lib/core.ts";
 
-const { products, stock } = createServices();
-const listed = await products.list(SEED_SHOP_ID);
-const rows = await Promise.all(
-  listed.map(async (product) => {
-    const inv = await stock.get(SEED_SHOP_ID, product.sku);
-    return { sku: product.sku, inv };
-  }),
-);
+const rows = await runAdminQuery(async (services) => {
+  const listed = await services.products.list(SEED_SHOP_ID);
+  return Promise.all(
+    listed.map(async (product) => {
+      const inv = await services.stock.get(SEED_SHOP_ID, product.sku);
+      const events = await services.stock.listEvents(SEED_SHOP_ID, product.sku);
+      return { sku: product.sku, inv, events };
+    }),
+  );
+});
 ---
-<html lang="pl">
-  <head>
-    <meta charset="utf-8" />
-    <title>Magazyn</title>
-  </head>
-  <body>
-    <p><a href="/admin">Dashboard</a></p>
-    <h1>Magazyn</h1>
-    <table>
-      <thead>
-        <tr>
-          <th>SKU</th>
-          <th>Na stanie</th>
-          <th>Zarezerwowane</th>
-          <th>Dostępne</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map(({ sku, inv }) => (
-          <tr>
-            <td>{sku}</td>
-            <td>{inv.onHand}</td>
-            <td>{inv.reserved}</td>
-            <td>{available(inv)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-    <form id="stock-form">
-      <input name="sku" placeholder="SKU" />
-      <input name="quantity" type="number" value="10" />
-      <button type="submit" data-reason="DELIVERY">Dostawa</button>
-      <button type="submit" data-reason="ADJUSTMENT">Korekta</button>
-    </form>
-    <script is:inline>
-      const form = document.getElementById("stock-form");
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const reason = event.submitter.getAttribute("data-reason");
-        const data = new FormData(form);
-        await fetch("/api/admin/inventory", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            sku: data.get("sku"),
-            quantity: Number(data.get("quantity")),
-            reason,
-          }),
-        });
-        location.reload();
+<AdminLayout title="Magazyn">
+  <p class="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-moss">Admin</p>
+  <h1 class="font-display m-0 mb-8 text-4xl font-medium">Magazyn</h1>
+  {
+    !rows ? (
+      <p class="mb-8 rounded-2xl border border-line bg-paper px-5 py-4 text-mute">
+        Dynamo / SST niedostępne.
+      </p>
+    ) : (
+      <div class="mb-10 overflow-hidden rounded-2xl border border-line bg-paper">
+        <table class="shop-table">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Na stanie</th>
+              <th>Zarezerwowane</th>
+              <th>Dostępne</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ sku, inv }) => (
+              <tr>
+                <td>{sku}</td>
+                <td>{inv.onHand}</td>
+                <td>{inv.reserved}</td>
+                <td>{available(inv)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+  <form id="stock-form" class="mb-10 flex max-w-lg flex-wrap items-end gap-3 rounded-2xl border border-line bg-paper p-6">
+    <label class="min-w-40 flex-1 text-sm font-semibold">
+      SKU
+      <input class="shop-input mt-2" name="sku" placeholder="SKU" required />
+    </label>
+    <label class="w-28 text-sm font-semibold">
+      Ilość
+      <input class="shop-input mt-2" name="quantity" type="number" value="10" required />
+    </label>
+    <button class="shop-btn" type="submit" data-reason="DELIVERY">Dostawa</button>
+    <button class="shop-btn shop-btn-ghost" type="submit" data-reason="ADJUSTMENT">Korekta</button>
+  </form>
+  {
+    rows &&
+      rows.map(({ sku, events }) => (
+        <section class="mb-8">
+          <h2 class="font-display m-0 mb-3 text-2xl font-medium">{sku}</h2>
+          {events.length === 0 ? (
+            <p class="text-mute">Brak eventów.</p>
+          ) : (
+            <div class="overflow-hidden rounded-2xl border border-line bg-paper">
+              <table class="shop-table">
+                <thead>
+                  <tr>
+                    <th>powód</th>
+                    <th>Δ onHand</th>
+                    <th>Δ reserved</th>
+                    <th>kiedy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((event) => (
+                    <tr>
+                      <td>{event.reason}</td>
+                      <td>{event.deltaOnHand}</td>
+                      <td>{event.deltaReserved}</td>
+                      <td>{event.createdAt.toISOString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ))
+  }
+  <script is:inline>
+    const form = document.getElementById("stock-form");
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const reason = event.submitter.getAttribute("data-reason");
+      const data = new FormData(form);
+      await fetch("/api/admin/inventory", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          sku: data.get("sku"),
+          quantity: Number(data.get("quantity")),
+          reason,
+        }),
       });
-    </script>
-  </body>
-</html>
+      location.reload();
+    });
+  </script>
+</AdminLayout>

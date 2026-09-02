@@ -64,4 +64,23 @@ describe("ProductService", () => {
       code: "PRODUCT_INACTIVE",
     });
   });
+
+  it("setStatus toggles a product off the storefront list", async () => {
+    const products = service();
+    await products.create({
+      shopId,
+      sku: "TOWEL-BLUE",
+      slug: "blue-towel",
+      name: "Blue Towel",
+      description: "",
+      images: [],
+      price: 19900,
+    });
+    const hidden = await products.setStatus(shopId, "TOWEL-BLUE", "inactive");
+    expect(hidden.status).toBe("inactive");
+    await expect(products.listActive(shopId)).resolves.toEqual([]);
+    const shown = await products.setStatus(shopId, "TOWEL-BLUE", "active");
+    expect(shown.status).toBe("active");
+    await expect(products.listActive(shopId)).resolves.toHaveLength(1);
+  });
 });

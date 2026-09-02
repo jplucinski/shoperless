@@ -1,37 +1,47 @@
 ---
 import { formatPln, SEED_SHOP_ID } from "@liteshop/core";
-import { createServices } from "../../../lib/core.ts";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { runAdminQuery } from "../../../lib/core.ts";
 
-const { orders } = createServices();
-const listed = await orders.list(SEED_SHOP_ID);
+const listed = await runAdminQuery((services) => services.orders.list(SEED_SHOP_ID));
 ---
-<html lang="pl">
-  <head>
-    <meta charset="utf-8" />
-    <title>Zamówienia</title>
-  </head>
-  <body>
-    <p><a href="/admin">Dashboard</a></p>
-    <h1>Zamówienia</h1>
-    <table>
-      <thead>
-        <tr>
-          <th>id</th>
-          <th>płatność</th>
-          <th>wysyłka</th>
-          <th>suma</th>
-        </tr>
-      </thead>
-      <tbody>
-        {listed.map((order) => (
-          <tr>
-            <td><a href={`/admin/orders/${order.id}`}>{order.id}</a></td>
-            <td>{order.paymentStatus}</td>
-            <td>{order.shippingStatus}</td>
-            <td>{formatPln(order.total)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </body>
-</html>
+<AdminLayout title="Zamówienia">
+  <p class="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-moss">Admin</p>
+  <h1 class="font-display m-0 mb-8 text-4xl font-medium">Zamówienia</h1>
+  {
+    !listed ? (
+      <p class="rounded-2xl border border-line bg-paper px-5 py-4 text-mute">
+        Dynamo / SST niedostępne.
+      </p>
+    ) : listed.length === 0 ? (
+      <p class="text-mute">Brak zamówień.</p>
+    ) : (
+      <div class="overflow-hidden rounded-2xl border border-line bg-paper">
+        <table class="shop-table">
+          <thead>
+            <tr>
+              <th>id</th>
+              <th>płatność</th>
+              <th>wysyłka</th>
+              <th>suma</th>
+            </tr>
+          </thead>
+          <tbody>
+            {listed.map((order) => (
+              <tr>
+                <td>
+                  <a class="font-semibold text-ink no-underline hover:text-moss" href={`/admin/orders/${order.id}`}>
+                    {order.id}
+                  </a>
+                </td>
+                <td>{order.paymentStatus}</td>
+                <td>{order.shippingStatus}</td>
+                <td>{formatPln(order.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+</AdminLayout>

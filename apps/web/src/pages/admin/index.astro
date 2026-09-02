@@ -1,32 +1,46 @@
 ---
 import { SEED_SHOP_ID, available } from "@liteshop/core";
-import { createServices } from "../../lib/core.ts";
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { runAdminQuery } from "../../lib/core.ts";
 
-const { orders, products, stock } = createServices();
-const listed = await orders.list(SEED_SHOP_ID);
-const catalog = await products.list(SEED_SHOP_ID);
-const todayCount = listed.length;
-const unpaid = listed.filter((o) => o.paymentStatus !== "PAID").length;
-let lowStock = 0;
-for (const product of catalog) {
-  const inv = await stock.get(SEED_SHOP_ID, product.sku);
-  if (available(inv) < 5) lowStock += 1;
-}
+const data = await runAdminQuery(async (services) => {
+  const listed = await services.orders.list(SEED_SHOP_ID);
+  const catalog = await services.products.list(SEED_SHOP_ID);
+  let lowStock = 0;
+  for (const product of catalog) {
+    const inv = await services.stock.get(SEED_SHOP_ID, product.sku);
+    if (available(inv) < 5) lowStock += 1;
+  }
+  return {
+    todayCount: listed.length,
+    unpaid: listed.filter((o) => o.paymentStatus !== "PAID").length,
+    lowStock,
+  };
+});
 ---
-<html lang="pl">
-  <head>
-    <meta charset="utf-8" />
-    <title>Admin</title>
-  </head>
-  <body>
-    <h1>Dashboard</h1>
-    <ul>
-      <li>Zamówienia: {todayCount}</li>
-      <li>Nieopłacone: {unpaid}</li>
-      <li>Niski stan: {lowStock}</li>
-    </ul>
-    <p><a href="/admin/orders">Zamówienia</a></p>
-    <p><a href="/admin/products">Produkty</a></p>
-    <p><a href="/admin/inventory">Magazyn</a></p>
-  </body>
-</html>
+<AdminLayout title="Admin">
+  <p class="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-moss">Admin</p>
+  <h1 class="font-display m-0 mb-8 text-4xl font-medium">Dashboard</h1>
+  {
+    !data ? (
+      <p class="rounded-2xl border border-line bg-paper px-5 py-4 text-mute">
+        Dynamo / SST niedostępne — liczby pojawią się po `sst dev`.
+      </p>
+    ) : (
+      <ul class="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-3">
+        <li class="rounded-2xl border border-line bg-paper px-5 py-6">
+          <p class="text-mute m-0 text-sm font-semibold uppercase tracking-[0.08em]">Zamówienia</p>
+          <p class="font-display m-0 mt-2 text-3xl">{data.todayCount}</p>
+        </li>
+        <li class="rounded-2xl border border-line bg-paper px-5 py-6">
+          <p class="text-mute m-0 text-sm font-semibold uppercase tracking-[0.08em]">Nieopłacone</p>
+          <p class="font-display m-0 mt-2 text-3xl">{data.unpaid}</p>
+        </li>
+        <li class="rounded-2xl border border-line bg-paper px-5 py-6">
+          <p class="text-mute m-0 text-sm font-semibold uppercase tracking-[0.08em]">Niski stan</p>
+          <p class="font-display m-0 mt-2 text-3xl">{data.lowStock}</p>
+        </li>
+      </ul>
+    )
+  }
+</AdminLayout>

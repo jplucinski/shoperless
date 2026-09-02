@@ -43,3 +43,13 @@ export function createServices() {
     logger,
   };
 }
+
+export async function runAdminQuery<T>(
+  fn: (services: ReturnType<typeof createServices>) => Promise<T>,
+): Promise<T | undefined> {
+  try {
+    return await fn(createServices());
+  } catch {
+    return undefined;
+  }
+}

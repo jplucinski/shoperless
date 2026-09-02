@@ -1,6 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
-import { Resource } from "sst";
-import { isAdminSession, SESSION_COOKIE } from "./lib/session.ts";
+import { adminSecret, isAdminSession, SESSION_COOKIE } from "./lib/session.ts";
 
 export const onRequest = defineMiddleware(async (context, next) => {
   const path = context.url.pathname;
@@ -10,7 +9,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     !path.startsWith("/api/admin/furgonetka/")
   ) {
     const cookie = context.cookies.get(SESSION_COOKIE)?.value;
-    if (!isAdminSession(cookie, Resource.AdminPassword.value)) {
+    if (!isAdminSession(cookie, adminSecret())) {
       return context.redirect("/admin/login");
     }
   }

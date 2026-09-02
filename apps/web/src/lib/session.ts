@@ -1,6 +1,16 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { Resource } from "sst";
 
 export const SESSION_COOKIE = "ls_session";
+
+export function adminSecret(): string {
+  try {
+    return Resource.AdminPassword.value;
+  } catch (error) {
+    if (import.meta.env.DEV) return "local-dev-admin";
+    throw error;
+  }
+}
 
 export function signAdminSession(secret: string): string {
   return createHmac("sha256", secret).update("admin").digest("hex");
