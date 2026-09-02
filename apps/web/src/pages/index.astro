@@ -17,30 +17,23 @@ try {
 }
 ---
 <ShopLayout title="LiteShop">
-  <p class="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-moss">Katalog</p>
-  <h1 class="font-display mb-8 max-w-xl text-4xl leading-tight font-medium">
-    Rzeczy do domu, bez szumu.
-  </h1>
   {
     catalogError && listed.length === 0 ? (
-      <p class="rounded-2xl border border-line bg-paper px-5 py-4 text-mute">
+      <p class="border-line bg-paper text-mute border px-5 py-4">
         Katalog chwilowo niedostępny (Dynamo / SST).
       </p>
     ) : listed.length === 0 ? (
       <p class="text-mute">Brak aktywnych produktów.</p>
     ) : (
-      <ul class="m-0 grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2">
+      <ul class="m-0 grid list-none grid-cols-1 gap-10 p-0 sm:grid-cols-2">
         {listed.map((product) => (
           <li>
-            <a
-              href={`/products/${product.slug}`}
-              class="block rounded-2xl border border-line bg-paper p-5 no-underline shadow-[0_1px_0_rgba(26,22,20,0.04)] transition hover:-translate-y-0.5 hover:border-moss/40"
-            >
-              <div class="mb-4 flex h-36 items-end rounded-xl bg-[linear-gradient(160deg,#d7e0d4,#c5b7a5)] px-4 py-3">
-                <span class="font-display text-paper text-2xl">{product.name.slice(0, 1)}</span>
+            <a href={`/products/${product.slug}`} class="text-ink block no-underline">
+              <div class="mb-3 flex aspect-[4/5] items-end bg-[linear-gradient(160deg,#d7e0d4,#c5b7a5)] px-4 py-3">
+                <span class="text-paper text-2xl font-bold">{product.name.slice(0, 1)}</span>
               </div>
-              <h2 class="m-0 text-lg font-semibold text-ink">{product.name}</h2>
-              <p class="mt-1 mb-0 text-mute">{formatPln(product.price)}</p>
+              <h2 class="m-0 text-base font-bold">{product.name}</h2>
+              <p class="mt-1 mb-0">{formatPln(product.price)}</p>
             </a>
           </li>
         ))}

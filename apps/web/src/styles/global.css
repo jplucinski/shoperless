@@ -10,6 +10,7 @@
   --color-line: #d9d0c3;
   --color-moss: #3f5a45;
   --color-moss-dark: #2d4233;
+  --color-mark: #6f140e;
 }
 
 html {
@@ -22,6 +23,44 @@ body {
   background: var(--color-linen);
   color: var(--color-ink);
   font-family: var(--font-sans);
+}
+
+.shop {
+  --font-display: "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Schibsted Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --color-linen: #f6f4eb;
+  --color-paper: #fbfaee;
+  --color-ink: #241500;
+  --color-mute: color-mix(in srgb, var(--color-ink) 55%, var(--color-linen));
+  --color-line: color-mix(in srgb, var(--color-ink) 18%, var(--color-linen));
+  font-family: var(--font-sans);
+  font-weight: 500;
+}
+
+.shop .shop-btn {
+  border-radius: 0;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.shop .shop-btn:hover {
+  background: var(--color-mark);
+}
+
+.shop .shop-btn-ghost {
+  background: transparent;
+  color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px var(--color-ink);
+}
+
+.shop .shop-btn-ghost:hover {
+  background: var(--color-paper);
+}
+
+.shop .shop-input {
+  border-radius: 0;
 }
 
 .shop-btn {
@@ -127,7 +166,7 @@ body {
   align-items: stretch;
   overflow: hidden;
   border: 1px solid var(--color-line);
-  border-radius: 1.25rem;
+  border-radius: 0;
   background: var(--color-paper);
 }
 
@@ -176,7 +215,7 @@ body {
   width: 4.25rem;
   flex-shrink: 0;
   align-items: flex-end;
-  border-radius: 1rem;
+  border-radius: 0;
   background: linear-gradient(160deg, #d7e0d4, #c5b7a5);
   padding: 0.5rem 0.7rem;
 }

@@ -1,8 +1,13 @@
 export const CART_KEY = "liteshop.cart";
+export const CART_EVENT = "liteshop:cart";
 
 export interface CartItem {
   sku: string;
   quantity: number;
+}
+
+export function cartQuantity(items: CartItem[]): number {
+  return items.reduce((sum, item) => sum + item.quantity, 0);
 }
 
 export function readCart(): CartItem[] {
@@ -14,4 +19,5 @@ export function readCart(): CartItem[] {
 
 export function writeCart(items: CartItem[]): void {
   localStorage.setItem(CART_KEY, JSON.stringify({ items }));
+  window.dispatchEvent(new Event(CART_EVENT));
 }

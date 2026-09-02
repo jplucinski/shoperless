@@ -85,16 +85,14 @@ export function CartView() {
 
   if (items.length === 0) {
     return (
-      <div className="flex min-h-[calc(100vh-14rem)] items-center justify-center">
-        <div className="w-full max-w-lg rounded-3xl border border-line bg-paper px-8 py-16 text-center">
-          <h1 className="font-display m-0 text-4xl font-medium">Koszyk jest pusty</h1>
-          <p className="text-mute mx-auto mt-3 mb-8 max-w-md">
-            Dodaj coś ze sklepu, potem wrócisz tutaj do kasy Furgonetka.
-          </p>
-          <a href="/" className="shop-btn no-underline">
-            Do sklepu
-          </a>
-        </div>
+      <div className="flex min-h-[calc(100vh-14rem)] flex-col items-center justify-center text-center">
+        <h1 className="m-0 text-4xl font-bold">Koszyk jest pusty</h1>
+        <p className="text-mute mx-auto mt-3 mb-8 max-w-md">
+          Dodaj coś ze sklepu, potem wrócisz tutaj do kasy Furgonetka.
+        </p>
+        <a href="/" className="shop-btn no-underline">
+          do sklepu
+        </a>
       </div>
     );
   }
@@ -105,11 +103,11 @@ export function CartView() {
     <div className="cart-page">
       <div className="cart-page-head">
         <div>
-          <h1 className="font-display text-4xl font-medium">Koszyk</h1>
+          <h1 className="text-4xl font-bold">Koszyk</h1>
           <p className="text-mute">{count} szt. w tej przeglądarce</p>
         </div>
-        <a href="/" className="text-sm font-semibold text-moss no-underline hover:text-moss-dark">
-          ← Kontynuuj zakupy
+        <a href="/" className="text-sm font-bold text-ink no-underline">
+          sklep
         </a>
       </div>
       <div className="cart-layout">
@@ -124,7 +122,7 @@ export function CartView() {
               <li key={line.sku} className="cart-line">
                 <div className="cart-product">
                   <div className="cart-thumb">
-                    <span className="font-display text-paper text-lg">{line.name.slice(0, 1)}</span>
+                    <span className="text-paper text-lg font-bold">{line.name.slice(0, 1)}</span>
                   </div>
                   <div className="min-w-0">
                     <p className="m-0 font-semibold">{line.name}</p>
@@ -139,7 +137,7 @@ export function CartView() {
                   </div>
                 </div>
                 <div className="cart-qty">
-                  <div className="flex items-center rounded-full border border-line">
+                  <div className="flex items-center border border-ink">
                     <button
                       type="button"
                       className="shop-qty"
@@ -183,7 +181,7 @@ export function CartView() {
           </ul>
         </div>
         <aside className="cart-summary">
-          <h2 className="font-display text-2xl font-medium">Podsumowanie</h2>
+          <h2 className="text-2xl font-bold">Podsumowanie</h2>
           <dl className="mt-5 mb-2 grid grid-cols-[1fr_auto] gap-y-3 text-sm">
             <dt className="text-mute">Produkty</dt>
             <dd className="m-0 font-semibold">{priced ? formatPln(total) : "Przy kasie"}</dd>
@@ -192,7 +190,7 @@ export function CartView() {
           </dl>
           <div className="mt-4 mb-6 flex items-center justify-between border-t border-line pt-4">
             <span className="font-semibold">Razem</span>
-            <span className="font-display text-2xl">{priced ? formatPln(total) : "—"}</span>
+            <span className="text-2xl font-bold">{priced ? formatPln(total) : "—"}</span>
           </div>
           <CheckoutButton className="shop-btn shop-btn-block" />
         </aside>
