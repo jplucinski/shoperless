@@ -6,38 +6,6 @@
 
 declare module "sst" {
   export interface Resource {
-    "AdminPassword": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "FurgonetkaClientId": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "FurgonetkaClientSecret": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "Images": {
-      "name": string
-      "type": "sst.aws.Bucket"
-    }
-    "KoszykSharedKey": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "Table": {
-      "name": string
-      "type": "sst.aws.Dynamo"
-    }
-    "TokenEncryptionKey": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
-    "Web": {
-      "type": "sst.aws.Astro"
-      "url": string
-    }
   }
 }
 /// <reference path="sst-env.d.ts" />

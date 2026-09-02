@@ -40,10 +40,13 @@ importers:
         version: link:../../packages/ui
       astro:
         specifier: ^5.1.8
-        version: 5.18.2(typescript@5.9.3)
+        version: 5.18.2(aws4fetch@1.0.18)(typescript@5.9.3)
       astro-sst:
         specifier: ^3.1.4
         version: 3.1.4
+      aws4fetch:
+        specifier: ^1.0.18
+        version: 1.0.18
       react:
         specifier: ^19.0.0
         version: 19.2.8
@@ -53,6 +56,9 @@ importers:
       sst:
         specifier: ^3.17.10
         version: 3.19.3
+      ulidx:
+        specifier: ^2.4.1
+        version: 2.4.1
       zod:
         specifier: ^3.24.2
         version: 3.25.76
@@ -81,6 +87,9 @@ importers:
       '@aws-sdk/lib-dynamodb':
         specifier: ^3.700.0
         version: 3.1121.0(@aws-sdk/client-dynamodb@3.1121.0)
+      layerr:
+        specifier: ^3.0.0
+        version: 3.0.0
       ulidx:
         specifier: ^2.4.1
         version: 2.4.1
@@ -2355,7 +2364,7 @@ packages:
       set-cookie-parser: 2.7.2
     dev: false
 
-  /astro@5.18.2(typescript@5.9.3):
+  /astro@5.18.2(aws4fetch@1.0.18)(typescript@5.9.3):
     resolution: {integrity: sha512-TnFwLnAXty5MXKPDGuKXqK4AMBXG+FH6RUdK7Oyc3gyfNoFIthT+4eRbzOK43bdRlLaZuxgciDSjgtggZ3OtGQ==}
     engines: {node: 18.20.8 || ^20.3.0 || >=22.0.0, npm: '>=9.6.5', pnpm: '>=7.1.0'}
     hasBin: true
@@ -2413,7 +2422,7 @@ packages:
       ultrahtml: 1.7.0
       unifont: 0.7.5
       unist-util-visit: 5.1.0
-      unstorage: 1.17.5
+      unstorage: 1.17.5(aws4fetch@1.0.18)
       vfile: 6.0.3
       vite: 6.4.3
       vitefu: 1.1.3(vite@6.4.3)
@@ -5133,7 +5142,7 @@ packages:
     resolution: {integrity: sha512-pjy2bYhSsufwWlKwPc+l3cN7+wuJlK6uz0YdJEOlQDbl6jo/YlPi4mb8agUkVC8BF7V8NuzeyPNqRksA3hztKQ==}
     engines: {node: '>= 0.8'}
 
-  /unstorage@1.17.5:
+  /unstorage@1.17.5(aws4fetch@1.0.18):
     resolution: {integrity: sha512-0i3iqvRfx29hkNntHyQvJTpf5W9dQ9ZadSoRU8+xVlhVtT7jAX57fazYO9EHvcRCfBCyi5YRya7XCDOsbTgkPg==}
     peerDependencies:
       '@azure/app-configuration': ^1.8.0
@@ -5196,6 +5205,7 @@ packages:
         optional: true
     dependencies:
       anymatch: 3.1.3
+      aws4fetch: 1.0.18
       chokidar: 5.0.0
       destr: 2.0.5
       h3: 1.15.11

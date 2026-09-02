@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.700.0",
-    "@aws-sdk/lib-dynamodb": "^3.700.0",
-    "ulidx": "^2.4.1"
+    "@aws-sdk/lib-dynamodb": "^3.700.0"
   }
 }

@@ -51,6 +51,9 @@ export default $config({
       job: {
         handler: "apps/web/src/jobs/release-expired-reservations.handler",
         link: [table, koszykSharedKey, adminPassword],
+        nodejs: {
+          install: ["@aws-sdk/client-dynamodb", "@aws-sdk/lib-dynamodb"],
+        },
       },
     });
 
