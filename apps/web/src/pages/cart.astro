@@ -1,10 +1,14 @@
 ---
 import { CartView } from "../islands/CartView.tsx";
 import ShopLayout from "../layouts/ShopLayout.astro";
+import { koszykCheckoutScriptSrc, koszykCheckoutUuid } from "../lib/koszyk.ts";
+
+const checkoutUuid = koszykCheckoutUuid();
+const checkoutScript = koszykCheckoutScriptSrc(import.meta.env.KOSZYK_ENV);
 ---
 <ShopLayout title="Koszyk" wide>
   <Fragment slot="head">
-    <script src="https://furgonetka.pl/js/dist/checkout/universal-checkout-sandbox.js" defer></script>
+    {checkoutUuid ? <script src={checkoutScript} defer /> : null}
   </Fragment>
-  <CartView client:load />
+  <CartView client:load checkoutUuid={checkoutUuid} />
 </ShopLayout>

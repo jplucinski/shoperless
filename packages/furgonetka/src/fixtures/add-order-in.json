@@ -1,0 +1,22 @@
+{
+  "cartId": "cart-seed-1",
+  "datetimeOrder": "2026-08-24T12:00:00",
+  "service": "dpd",
+  "codAmount": 0,
+  "shippingAddress": {
+    "name": "Jan",
+    "surname": "Kowalski",
+    "street": "Polna 1/2",
+    "city": "Gdańsk",
+    "postcode": "80-300",
+    "countryCode": "PL",
+    "phone": "500123456",
+    "email": "test@example.com"
+  },
+  "products": [
+    {
+      "sourceProductId": "TOWEL-BLUE",
+      "quantity": 2
+    }
+  ]
+}

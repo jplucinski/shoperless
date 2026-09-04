@@ -34,6 +34,24 @@ describe("cartQuantity", () => {
   });
 });
 
+describe("readCart", () => {
+  beforeEach(() => {
+    installCartMemory();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns empty list when storage is missing, corrupt, or not a cart", () => {
+    expect(readCart()).toEqual([]);
+    localStorage.setItem(CART_KEY, "{");
+    expect(readCart()).toEqual([]);
+    localStorage.setItem(CART_KEY, JSON.stringify({ items: "nope" }));
+    expect(readCart()).toEqual([]);
+  });
+});
+
 describe("writeCart", () => {
   let dispatched: string[] = [];
 

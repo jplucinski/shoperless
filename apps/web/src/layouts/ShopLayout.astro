@@ -23,7 +23,7 @@ const { title, wide = false } = Astro.props;
     <slot name="head" />
   </head>
   <body class="shop flex min-h-screen flex-col">
-    <header class="fixed top-0 left-0 z-50 flex w-full items-center justify-between px-5 py-4 md:px-10 md:py-5">
+    <header class="fixed top-0 left-0 z-10 flex w-full items-center justify-between px-5 py-4 md:px-10 md:py-5">
       <a href="/" class="text-ink text-[18px] leading-none font-bold no-underline">sklep</a>
       <CartCount client:load />
     </header>

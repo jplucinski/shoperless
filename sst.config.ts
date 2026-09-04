@@ -33,12 +33,18 @@ export default $config({
       access: "public",
     });
 
+    const koszykCheckoutUuid = new sst.Secret("KoszykCheckoutUuid");
+
     const web = new sst.aws.Astro("Web", {
       path: "apps/web",
+      environment: {
+        KOSZYK_ENV: $app.stage === "production" ? "prod" : "sandbox",
+      },
       link: [
         table,
         images,
         koszykSharedKey,
+        koszykCheckoutUuid,
         adminPassword,
         furgonetkaClientId,
         furgonetkaClientSecret,

@@ -39,11 +39,13 @@ export type { CartItem, PreparedCheckout, PreparedLine } from "./cart/cart.ts";
 export { CartService } from "./cart/cart-service.ts";
 export type {
   ApplyPaymentCommand,
+  ApplyTrackingCommand,
   CreateOrderCommand,
   OrderItem,
   OrderMirror,
   OrderStatus,
   PaymentStatus,
+  ShippingAddress,
   ShippingStatus,
 } from "./order/order.ts";
 export type { OrderRepository } from "./order/order-repository.ts";

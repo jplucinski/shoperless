@@ -22,6 +22,10 @@ declare module "sst" {
       "name": string
       "type": "sst.aws.Bucket"
     }
+    "KoszykCheckoutUuid": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
     "KoszykSharedKey": {
       "type": "sst.sst.Secret"
       "value": string

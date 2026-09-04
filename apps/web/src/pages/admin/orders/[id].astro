@@ -1,8 +1,8 @@
 ---
 import { formatPln, SEED_SHOP_ID } from "@liteshop/core";
 import { furgonetkaOrderUrl } from "@liteshop/furgonetka";
-import AdminLayout from "../../../../layouts/AdminLayout.astro";
-import { runAdminQuery } from "../../../../lib/core.ts";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { runAdminQuery } from "../../../lib/core.ts";
 
 const id = Astro.params.id;
 if (!id) {
@@ -22,6 +22,12 @@ if (!order) {
   <h1 class="font-display m-0 text-3xl font-medium">{order.id}</h1>
   <p class="text-mute mt-2">
     Płatność: {order.paymentStatus} · Wysyłka: {order.shippingStatus}
+    {order.trackingNumber ? ` · ${order.trackingNumber}` : ""}
+  </p>
+  <p class="text-mute mt-2 text-sm">
+    {order.shippingAddress.name} {order.shippingAddress.surname}<br />
+    {order.shippingAddress.street}, {order.shippingAddress.postcode} {order.shippingAddress.city}<br />
+    {order.shippingAddress.email}
   </p>
   <ul class="mt-8 mb-6 list-none rounded-2xl border border-line bg-paper p-0">
     {order.items.map((item) => (
@@ -34,7 +40,7 @@ if (!order) {
     ))}
   </ul>
   <p class="mb-8 text-xl font-semibold">Suma: {formatPln(order.total)}</p>
-  <a class="shop-btn no-underline" href={furgonetkaOrderUrl(order.externalOrderId)}>
+  <a class="shop-btn no-underline" href={furgonetkaOrderUrl(order.id)}>
     Otwórz w Furgonetce
   </a>
 </AdminLayout>

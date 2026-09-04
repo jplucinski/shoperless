@@ -13,8 +13,20 @@ export function cartQuantity(items: CartItem[]): number {
 export function readCart(): CartItem[] {
   const raw = localStorage.getItem(CART_KEY);
   if (!raw) return [];
-  const parsed = JSON.parse(raw) as { items?: CartItem[] };
-  return parsed.items ?? [];
+  try {
+    const parsed = JSON.parse(raw) as { items?: unknown };
+    if (!Array.isArray(parsed.items)) return [];
+    return parsed.items.filter(
+      (item): item is CartItem =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as CartItem).sku === "string" &&
+        Number.isInteger((item as CartItem).quantity) &&
+        (item as CartItem).quantity > 0,
+    );
+  } catch {
+    return [];
+  }
 }
 
 export function writeCart(items: CartItem[]): void {

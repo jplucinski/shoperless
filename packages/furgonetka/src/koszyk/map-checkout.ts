@@ -1,5 +1,6 @@
 import type { PreparedCheckout } from "@liteshop/core";
 import type { CheckoutCartData } from "./checkout-cart-data.ts";
+import { seedPaymentMethods, seedShippingMethods } from "./checkout-methods.ts";
 
 function groszeToZl(grosze: number): number {
   return grosze / 100;
@@ -7,12 +8,18 @@ function groszeToZl(grosze: number): number {
 
 export function toCheckoutCartData(prepared: PreparedCheckout): CheckoutCartData {
   return {
-    products: prepared.lines.map((line) => ({
-      name: line.name,
-      sku: line.sku,
-      quantity: line.quantity,
-      price: groszeToZl(line.unitPrice),
-    })),
-    totalPrice: groszeToZl(prepared.total),
+    cart: {
+      id: null,
+      currency: prepared.currency,
+      products: prepared.lines.map((line) => ({
+        id: line.sku,
+        name: line.name,
+        quantity: line.quantity,
+        priceGross: groszeToZl(line.unitPrice),
+      })),
+      totalGross: groszeToZl(prepared.total),
+    },
+    shippingMethods: seedShippingMethods(),
+    paymentMethods: seedPaymentMethods(),
   };
 }

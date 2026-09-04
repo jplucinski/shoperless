@@ -13,13 +13,9 @@ interface CatalogLine {
   unitPrice: number;
 }
 
-const FALLBACK: Record<string, CatalogLine> = {
-  "TOWEL-BLUE": { name: "Blue Towel", unitPrice: 19900 },
-};
-
-export function CartView() {
+export function CartView(props: { checkoutUuid?: string }) {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [catalog, setCatalog] = useState<Record<string, CatalogLine>>(FALLBACK);
+  const [catalog, setCatalog] = useState<Record<string, CatalogLine>>({});
 
   useEffect(() => {
     const add = new URLSearchParams(window.location.search).get("add");
@@ -48,7 +44,7 @@ export function CartView() {
           products?: { sku: string; name: string; price: number }[];
         };
         if (!body.products) return;
-        const next = { ...FALLBACK };
+        const next: Record<string, CatalogLine> = {};
         for (const product of body.products) {
           next[product.sku] = {
             name: product.name,
@@ -192,7 +188,7 @@ export function CartView() {
             <span className="font-semibold">Razem</span>
             <span className="text-2xl font-bold">{priced ? formatPln(total) : "—"}</span>
           </div>
-          <CheckoutButton className="shop-btn shop-btn-block" />
+          {props.checkoutUuid ? <CheckoutButton checkoutUuid={props.checkoutUuid} /> : null}
         </aside>
       </div>
     </div>

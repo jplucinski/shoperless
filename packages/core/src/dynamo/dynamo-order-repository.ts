@@ -1,7 +1,7 @@
 import type { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { GetCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import type { OrderId, ShopId } from "../ids.ts";
-import type { OrderMirror } from "../order/order.ts";
+import type { OrderMirror, ShippingAddress } from "../order/order.ts";
 import type { OrderRepository } from "../order/order-repository.ts";
 import { keys } from "./keys.ts";
 
@@ -47,6 +47,14 @@ export class DynamoOrderRepository implements OrderRepository {
           shippingStatus: order.shippingStatus,
           items: order.items,
           total: order.total,
+          createdAt: order.createdAt.toISOString(),
+          shippingAddress: order.shippingAddress,
+          codAmount: order.codAmount,
+          totalPaid: order.totalPaid,
+          trackingNumber: order.trackingNumber,
+          courierService: order.courierService,
+          pickupPoint: order.pickupPoint,
+          comment: order.comment,
         },
       }),
     );
@@ -86,5 +94,24 @@ function toOrder(item: Record<string, unknown>): OrderMirror {
     shippingStatus: item.shippingStatus as OrderMirror["shippingStatus"],
     items: item.items as OrderMirror["items"],
     total: item.total as number,
+    createdAt: new Date(String(item.createdAt ?? new Date().toISOString())),
+    shippingAddress: (item.shippingAddress ?? defaultAddress()) as ShippingAddress,
+    codAmount: (item.codAmount as number | undefined) ?? 0,
+    totalPaid: (item.totalPaid as number | undefined) ?? 0,
+    trackingNumber: item.trackingNumber as string | undefined,
+    courierService: item.courierService as string | undefined,
+    pickupPoint: item.pickupPoint as string | undefined,
+    comment: item.comment as string | undefined,
+  };
+}
+
+function defaultAddress(): ShippingAddress {
+  return {
+    street: "",
+    city: "",
+    postcode: "",
+    countryCode: "PL",
+    phone: "",
+    email: "",
   };
 }

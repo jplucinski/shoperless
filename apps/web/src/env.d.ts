@@ -1,9 +1,13 @@
 /// <reference path="../.astro/types.d.ts" />
 
 interface Window {
-  Furgonetka: {
+  Furgonetka?: {
     Checkout: {
-      init: (cfg: unknown) => void;
+      init: (configuration: {
+        checkoutUuid: string;
+        defaultButtonContainer: string;
+        dataProviderCallback: () => Promise<unknown>;
+      }) => void;
     };
   };
 }

@@ -6,6 +6,10 @@ describe("verifySharedKey", () => {
     expect(verifySharedKey("secret", "secret")).toBe(true);
   });
 
+  it("accepts Bearer prefix", () => {
+    expect(verifySharedKey("Bearer secret", "secret")).toBe(true);
+  });
+
   it("rejects a mismatch", () => {
     expect(verifySharedKey("nope", "secret")).toBe(false);
   });
