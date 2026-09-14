@@ -114,8 +114,3 @@ export function toOrderOut(order: OrderMirror): OrderOut {
     sourceDatetimeChange: order.createdAt.toISOString(),
   };
 }
-
-export function furgonetkaOrderUrl(sourceOrderId: string): string {
-  void sourceOrderId;
-  return "https://sandbox.furgonetka.pl";
-}

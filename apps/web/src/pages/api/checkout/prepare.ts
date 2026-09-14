@@ -30,12 +30,6 @@ export const POST: APIRoute = async ({ request }) => {
       headers: { "content-type": "application/json" },
     });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return new Response(
-        JSON.stringify({ code: "INVALID_CART", message: "invalid items" }),
-        { status: 409, headers: { "content-type": "application/json" } },
-      );
-    }
     const mapped = toHttpError(error);
     return new Response(JSON.stringify(mapped.body), {
       status: mapped.status,

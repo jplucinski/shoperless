@@ -14,6 +14,7 @@ export default $config({
     const adminPassword = new sst.Secret("AdminPassword");
     const furgonetkaClientId = new sst.Secret("FurgonetkaClientId");
     const furgonetkaClientSecret = new sst.Secret("FurgonetkaClientSecret");
+    const furgonetkaAccountId = new sst.Secret("FurgonetkaAccountId");
     const tokenEncryptionKey = new sst.Secret("TokenEncryptionKey");
 
     const table = new sst.aws.Dynamo("Table", {
@@ -49,6 +50,7 @@ export default $config({
         furgonetkaClientId,
         furgonetkaClientSecret,
         tokenEncryptionKey,
+        furgonetkaAccountId,
       ],
     });
 

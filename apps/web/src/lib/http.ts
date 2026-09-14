@@ -1,9 +1,13 @@
 import { DomainError } from "@liteshop/core";
+import { ZodError } from "zod";
 
 export function toHttpError(error: unknown): {
   status: number;
   body: { code: string; message: string };
 } {
+  if (error instanceof ZodError) {
+    return { status: 400, body: { code: "INVALID_CART", message: "invalid items" } };
+  }
   if (error instanceof DomainError) {
     const conflict = new Set([
       "INSUFFICIENT_STOCK",

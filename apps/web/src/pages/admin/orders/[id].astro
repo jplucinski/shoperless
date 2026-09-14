@@ -1,6 +1,6 @@
 ---
 import { formatPln, SEED_SHOP_ID } from "@liteshop/core";
-import { furgonetkaOrderUrl } from "@liteshop/furgonetka";
+import { furgonetkaPanelUrl } from "@liteshop/furgonetka";
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 import { runAdminQuery } from "../../../lib/core.ts";
 
@@ -40,7 +40,7 @@ if (!order) {
     ))}
   </ul>
   <p class="mb-8 text-xl font-semibold">Suma: {formatPln(order.total)}</p>
-  <a class="shop-btn no-underline" href={furgonetkaOrderUrl(order.id)}>
-    Otwórz w Furgonetce
+  <a class="shop-btn no-underline" href={furgonetkaPanelUrl(import.meta.env.KOSZYK_ENV)}>
+    Panel Furgonetki (brak deep-link zamówienia)
   </a>
 </AdminLayout>

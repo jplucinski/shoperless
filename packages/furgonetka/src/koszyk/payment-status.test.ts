@@ -14,4 +14,13 @@ describe("mapProviderPaymentStatus", () => {
     expect(mapProviderPaymentStatus("canceled")).toBe("CANCELLED");
     expect(mapProviderPaymentStatus("pending")).toBe("PENDING");
   });
+
+  it("throws UnknownPaymentStatusError for an unmapped provider status", () => {
+    expect(() => mapProviderPaymentStatus("chargeback")).toThrowError(
+      expect.objectContaining({
+        name: "UnknownPaymentStatusError",
+        providerStatus: "chargeback",
+      }),
+    );
+  });
 });

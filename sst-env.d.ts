@@ -10,6 +10,10 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
+    "FurgonetkaAccountId": {
+      "type": "sst.sst.Secret"
+      "value": string
+    }
     "FurgonetkaClientId": {
       "type": "sst.sst.Secret"
       "value": string
