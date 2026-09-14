@@ -1,5 +1,12 @@
 import type { PaymentStatus } from "@liteshop/core";
 
+export class UnknownPaymentStatusError extends Error {
+  constructor(public readonly providerStatus: string) {
+    super("unknown furgonetka payment status");
+    this.name = "UnknownPaymentStatusError";
+  }
+}
+
 const PAID = new Set(["paid", "completed"]);
 const FAILED = new Set(["failed"]);
 const CANCELLED = new Set(["cancelled", "canceled"]);
@@ -11,5 +18,5 @@ export function mapProviderPaymentStatus(providerStatus: string): PaymentStatus 
   if (FAILED.has(normalized)) return "FAILED";
   if (CANCELLED.has(normalized)) return "CANCELLED";
   if (PENDING.has(normalized)) return "PENDING";
-  throw new Error("unknown furgonetka payment status");
+  throw new UnknownPaymentStatusError(providerStatus);
 }

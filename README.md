@@ -82,6 +82,7 @@ npx sst secret set KoszykCheckoutUuid "<uuid-from-koszyk-panel>"
 npx sst secret set AdminPassword "<admin-password>"
 npx sst secret set FurgonetkaClientId "<oauth-client-id>"
 npx sst secret set FurgonetkaClientSecret "<oauth-client-secret>"
+npx sst secret set FurgonetkaAccountId "<jwt sub of the merchant account>"
 npx sst secret set TokenEncryptionKey "<32+ byte key>"
 pnpm dev
 ```
@@ -113,4 +114,6 @@ Inbound shop API base: `{origin}/api/furgonetka` ([ADR-003](docs/adr/0003-furgon
 
 Fixtures: `packages/furgonetka/src/fixtures/`. Contract: [OpenAPI](https://furgonetka.pl/js/swagger/universal-integration-structure-documentation.yaml).
 
-`sourceOrderId` is LiteShop’s Order Mirror id (`ord_…`). Idempotency on create uses Furgonetka `cartId`.
+`sourceOrderId` is LiteShop’s Order Mirror id (`ord_…`). Idempotency on create uses Furgonetka `cartId` (omit `cartId` and retries create extra orders). Checkout currently ships seed payment/shipping methods (Tpay + courier `15.99` zł); cart `totalGross` is catalog lines only — Koszyk adds shipping on their side.
+
+Admin “Panel Furgonetki” opens the sandbox/prod panel. Koszyk OpenAPI has no order deep-link. OAuth admin login requires `FurgonetkaAccountId` to match JWT `sub` (fail-closed if empty).

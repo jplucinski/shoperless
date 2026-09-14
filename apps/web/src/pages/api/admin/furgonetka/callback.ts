@@ -2,7 +2,7 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 import type { APIRoute } from "astro";
 import { SEED_SHOP_ID, keys } from "@liteshop/core";
-import { encryptRefreshToken, parseTokenResponse } from "@liteshop/furgonetka";
+import { encryptRefreshToken, isAllowedAccount, parseAccessTokenAccountId, parseTokenResponse } from "@liteshop/furgonetka";
 import { Resource } from "sst";
 import { sessionCookieHeader } from "../../../../lib/session.ts";
 
@@ -32,6 +32,15 @@ export const GET: APIRoute = async ({ url, cookies }) => {
     return new Response("Token exchange failed", { status: 502 });
   }
   const tokens = parseTokenResponse(await tokenRes.json());
+  let accountId: string;
+  try {
+    accountId = parseAccessTokenAccountId(tokens.accessToken);
+  } catch {
+    return new Response("Invalid access token", { status: 502 });
+  }
+  if (!isAllowedAccount(accountId, Resource.FurgonetkaAccountId.value)) {
+    return new Response("Forbidden account", { status: 403 });
+  }
   const ciphertext = encryptRefreshToken(
     tokens.refreshToken,
     Resource.TokenEncryptionKey.value,
@@ -43,7 +52,7 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       Item: {
         ...keys.furgonetka(SEED_SHOP_ID),
         shopId: SEED_SHOP_ID,
-        accountId: "furgonetka",
+        accountId,
         refreshTokenCiphertext: ciphertext,
         connectedAt: new Date().toISOString(),
         status: "connected",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DomainError } from "@liteshop/core";
+import { ZodError } from "zod";
 import { toHttpError } from "./http.ts";
 
 describe("toHttpError", () => {
@@ -8,6 +9,22 @@ describe("toHttpError", () => {
     expect(toHttpError(err)).toEqual({
       status: 409,
       body: { code: "INSUFFICIENT_STOCK", message: "no stock" },
+    });
+  });
+
+  it("maps ZodError to 400", () => {
+    const err = new ZodError([
+      {
+        code: "invalid_type",
+        expected: "array",
+        received: "undefined",
+        path: ["items"],
+        message: "Required",
+      },
+    ]);
+    expect(toHttpError(err)).toEqual({
+      status: 400,
+      body: { code: "INVALID_CART", message: "invalid items" },
     });
   });
 });
