@@ -5,6 +5,8 @@ export interface Inventory {
   sku: Sku;
   onHand: number;
   reserved: number;
+  /** Optimistic concurrency token; defaults to 0 when absent in storage. */
+  version: number;
 }
 
 export function available(inventory: Inventory): number {

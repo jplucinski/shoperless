@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { keys, RESERVE_CONDITION } from "./keys.ts";
+import { inventoryReserveUpdate, keys } from "./keys.ts";
 
 describe("keys", () => {
   it("scopes inventory to shop and sku", () => {
@@ -9,7 +9,30 @@ describe("keys", () => {
     });
   });
 
-  it("exports the reserve ConditionExpression", () => {
-    expect(RESERVE_CONDITION).toContain("onHand - reserved >= :qty");
+  it("scopes reservations to order and sku", () => {
+    expect(keys.reservation("shop_seed", "ord_1", "TOWEL-BLUE")).toEqual({
+      pk: "SHOP#shop_seed",
+      sk: "RESERVATION#ord_1#TOWEL-BLUE",
+      gsi1pk: "SHOP#shop_seed#RESERVATION",
+    });
+  });
+
+  it("scopes inventory events to sku", () => {
+    expect(keys.inventoryEvent("shop_seed", "TOWEL-BLUE", "evt_1")).toEqual({
+      pk: "SHOP#shop_seed",
+      sk: "INVEVT#TOWEL-BLUE#evt_1",
+    });
+  });
+
+  it("uses optimistic concurrency for reserve updates without create-on-miss", () => {
+    const reserve = inventoryReserveUpdate(
+      { shopId: "shop_seed", sku: "TOWEL-BLUE", onHand: 10, reserved: 2, version: 3 },
+      4,
+    );
+    expect(reserve.condition).toContain("version = :expectedVersion");
+    expect(reserve.condition).toContain("onHand >= :minOnHand");
+    expect(reserve.condition).not.toContain("attribute_not_exists");
+    expect(reserve.values[":minOnHand"]).toBe(6);
+    expect(reserve.values[":expectedVersion"]).toBe(3);
   });
 });

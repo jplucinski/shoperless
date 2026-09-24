@@ -19,9 +19,9 @@ describe("toCheckoutCartData", () => {
       ],
       total: 39800,
     };
-    const data = toCheckoutCartData(prepared);
+    const data = toCheckoutCartData(prepared, "prep_123");
     expect(data.cart).toEqual({
-      id: null,
+      id: "prep_123",
       currency: "PLN",
       products: [
         {

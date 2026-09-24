@@ -8,6 +8,7 @@ export interface CommerceLog {
     | "payment.apply"
     | "reservation.release"
     | "checkout.prepare"
+    | "checkout.prepare.miss"
     | "furgonetka.inbound";
   orderId?: OrderId;
   externalOrderId?: string;

@@ -1,5 +1,6 @@
 import {
   DomainError,
+  InsufficientStockError,
   type ApplyPaymentCommand,
   type ApplyTrackingCommand,
   type CreateOrderCommand,
@@ -95,7 +96,13 @@ export async function handleFurgonetkaInbound(
     if (error instanceof UnknownPaymentStatusError) {
       return { status: 400, body: { error: "invalid_payment_status" } };
     }
+    if (error instanceof InsufficientStockError) {
+      return { status: 409, body: { error: "insufficient_stock" } };
+    }
     if (error instanceof DomainError && error.code === "ORDER_NOT_FOUND") {
+      if (route.kind === "orders-payments") {
+        return { status: 503, body: { error: "order_not_ready" } };
+      }
       return { status: 404, body: { error: "not_found" } };
     }
     return { status: 500, body: { error: "internal_error" } };

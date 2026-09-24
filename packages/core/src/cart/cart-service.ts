@@ -14,9 +14,10 @@ export class CartService {
   ) {}
 
   async prepare(shopId: ShopId, items: CartItem[]): Promise<PreparedCheckout> {
+    const collapsed = collapseCartItems(items);
     const lines: PreparedLine[] = [];
     let total = 0;
-    for (const item of items) {
+    for (const item of collapsed) {
       if (!Number.isInteger(item.quantity) || item.quantity <= 0) {
         throw new DomainError("INVALID_CART", "quantity must be a positive integer");
       }
@@ -44,4 +45,12 @@ export class CartService {
     }
     return { shopId, currency: "PLN", lines, total };
   }
+}
+
+function collapseCartItems(items: CartItem[]): CartItem[] {
+  const bySku = new Map<string, number>();
+  for (const item of items) {
+    bySku.set(item.sku, (bySku.get(item.sku) ?? 0) + item.quantity);
+  }
+  return [...bySku.entries()].map(([sku, quantity]) => ({ sku, quantity }));
 }

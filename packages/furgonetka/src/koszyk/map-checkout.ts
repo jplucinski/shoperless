@@ -6,10 +6,13 @@ function groszeToZl(grosze: number): number {
   return grosze / 100;
 }
 
-export function toCheckoutCartData(prepared: PreparedCheckout): CheckoutCartData {
+export function toCheckoutCartData(
+  prepared: PreparedCheckout,
+  prepareId?: string,
+): CheckoutCartData {
   return {
     cart: {
-      id: null,
+      id: prepareId ?? null,
       currency: prepared.currency,
       products: prepared.lines.map((line) => ({
         id: line.sku,

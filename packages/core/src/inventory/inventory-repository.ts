@@ -6,7 +6,12 @@ export interface InventoryRepository {
   save(inventory: Inventory): Promise<void>;
   appendEvent(event: InventoryEvent): Promise<void>;
   listEvents(shopId: ShopId, sku: Sku): Promise<InventoryEvent[]>;
-  getReservation(shopId: ShopId, orderId: OrderId): Promise<Reservation | undefined>;
+  getReservationLine(
+    shopId: ShopId,
+    orderId: OrderId,
+    sku: Sku,
+  ): Promise<Reservation | undefined>;
+  listReservationsForOrder(shopId: ShopId, orderId: OrderId): Promise<Reservation[]>;
   saveReservation(reservation: Reservation): Promise<void>;
   listOpenExpired(shopId: ShopId, now: Date): Promise<Reservation[]>;
   transactReserve?(input: {

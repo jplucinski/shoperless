@@ -1,9 +1,22 @@
+import { TransactionCanceledException } from "@aws-sdk/client-dynamodb";
 import type { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
-import { GetCommand, PutCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, QueryCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { InsufficientStockError } from "../errors.ts";
+import type { Inventory, InventoryEvent, Reservation } from "../inventory/inventory.ts";
 import type { OrderId, ShopId } from "../ids.ts";
+import type { Money } from "../money.ts";
 import type { OrderMirror, ShippingAddress } from "../order/order.ts";
-import type { OrderRepository } from "../order/order-repository.ts";
-import { keys } from "./keys.ts";
+import type {
+  ConfirmSaleLineTransact,
+  OrderRepository,
+  ReserveLineTransact,
+} from "../order/order-repository.ts";
+import {
+  inventoryConfirmSaleUpdate,
+  inventoryReleaseUpdate,
+  inventoryReserveUpdate,
+  keys,
+} from "./keys.ts";
 
 export class DynamoOrderRepository implements OrderRepository {
   constructor(
@@ -37,25 +50,7 @@ export class DynamoOrderRepository implements OrderRepository {
     await this.doc.send(
       new PutCommand({
         TableName: this.tableName,
-        Item: {
-          ...keys.order(order.shopId, order.id),
-          id: order.id,
-          shopId: order.shopId,
-          externalOrderId: order.externalOrderId,
-          status: order.status,
-          paymentStatus: order.paymentStatus,
-          shippingStatus: order.shippingStatus,
-          items: order.items,
-          total: order.total,
-          createdAt: order.createdAt.toISOString(),
-          shippingAddress: order.shippingAddress,
-          codAmount: order.codAmount,
-          totalPaid: order.totalPaid,
-          trackingNumber: order.trackingNumber,
-          courierService: order.courierService,
-          pickupPoint: order.pickupPoint,
-          comment: order.comment,
-        },
+        Item: toOrderItem(order),
       }),
     );
     await this.doc.send(
@@ -82,6 +77,244 @@ export class DynamoOrderRepository implements OrderRepository {
     );
     return (result.Items ?? []).map(toOrder);
   }
+
+  async transactCreateOrder(input: {
+    order: OrderMirror;
+    reserveLines: ReserveLineTransact[];
+  }): Promise<"created" | "duplicate"> {
+    const transactItems: Array<Record<string, unknown>> = [
+      {
+        Put: {
+          TableName: this.tableName,
+          Item: {
+            ...keys.externalOrder(input.order.shopId, input.order.externalOrderId),
+            orderId: input.order.id,
+          },
+          ConditionExpression: "attribute_not_exists(pk)",
+        },
+      },
+      {
+        Put: {
+          TableName: this.tableName,
+          Item: toOrderItem(input.order),
+        },
+      },
+    ];
+
+    for (const line of input.reserveLines) {
+      const reserve = inventoryReserveUpdate(line.inventory, line.quantity);
+      transactItems.push(
+        {
+          Update: {
+            TableName: this.tableName,
+            Key: keys.inventory(line.inventory.shopId, line.inventory.sku),
+            UpdateExpression: reserve.update,
+            ConditionExpression: reserve.condition,
+            ExpressionAttributeValues: reserve.values,
+          },
+        },
+        {
+          Put: {
+            TableName: this.tableName,
+            Item: toReservationItem(line.reservation),
+            ConditionExpression: "attribute_not_exists(pk)",
+          },
+        },
+        {
+          Put: {
+            TableName: this.tableName,
+            Item: toEventItem(line.event),
+          },
+        },
+      );
+    }
+
+    try {
+      await this.doc.send(
+        new TransactWriteCommand({
+          TransactItems: transactItems as never,
+        }),
+      );
+      return "created";
+    } catch (error) {
+      if (error instanceof TransactionCanceledException) {
+        const reasons = error.CancellationReasons ?? [];
+        if (reasons[0]?.Code === "ConditionalCheckFailed") {
+          return "duplicate";
+        }
+        const failedSku = input.reserveLines[0]?.reservation.sku ?? "unknown";
+        const failedQty = input.reserveLines[0]?.quantity ?? 0;
+        throw new InsufficientStockError(failedSku, failedQty);
+      }
+      throw error;
+    }
+  }
+
+  async transactConfirmPayment(input: {
+    order: OrderMirror;
+    paidAmount: Money;
+    lines: ConfirmSaleLineTransact[];
+  }): Promise<"confirmed" | "already_paid"> {
+    const transactItems: Array<Record<string, unknown>> = [
+      {
+        Update: {
+          TableName: this.tableName,
+          Key: keys.order(input.order.shopId, input.order.id),
+          UpdateExpression: "SET paymentStatus = :paid, totalPaid = :amount",
+          ConditionExpression: "paymentStatus <> :paid",
+          ExpressionAttributeValues: {
+            ":paid": "PAID",
+            ":amount": input.paidAmount,
+          },
+        },
+      },
+    ];
+
+    for (const line of input.lines) {
+      const sale = inventoryConfirmSaleUpdate(line.inventory, line.reservation);
+      transactItems.push(
+        {
+          Update: {
+            TableName: this.tableName,
+            Key: keys.inventory(line.inventory.shopId, line.inventory.sku),
+            UpdateExpression: sale.update,
+            ConditionExpression: sale.condition,
+            ExpressionAttributeValues: sale.values,
+          },
+        },
+        {
+          Update: {
+            TableName: this.tableName,
+            Key: keys.reservation(
+              line.reservation.shopId,
+              line.reservation.orderId,
+              line.reservation.sku,
+            ),
+            UpdateExpression: "SET #status = :sold",
+            ConditionExpression: "#status IN (:open, :released)",
+            ExpressionAttributeNames: { "#status": "status" },
+            ExpressionAttributeValues: {
+              ":sold": "sold",
+              ":open": "open",
+              ":released": "released",
+            },
+          },
+        },
+        {
+          Put: {
+            TableName: this.tableName,
+            Item: toEventItem(line.saleEvent),
+          },
+        },
+      );
+    }
+
+    try {
+      await this.doc.send(
+        new TransactWriteCommand({
+          TransactItems: transactItems as never,
+        }),
+      );
+      return "confirmed";
+    } catch (error) {
+      if (error instanceof TransactionCanceledException) {
+        const reasons = error.CancellationReasons ?? [];
+        if (reasons[0]?.Code === "ConditionalCheckFailed") {
+          return "already_paid";
+        }
+      }
+      throw error;
+    }
+  }
+
+  async transactReleaseReservation(input: {
+    order: OrderMirror;
+    reservation: Reservation;
+    inventory: Inventory;
+    event: InventoryEvent;
+  }): Promise<"released" | "skipped"> {
+    const release = inventoryReleaseUpdate(input.inventory, input.reservation.quantity);
+    try {
+      await this.doc.send(
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Update: {
+                TableName: this.tableName,
+                Key: keys.order(input.order.shopId, input.order.id),
+                UpdateExpression: "SET shopId = :shopId",
+                ConditionExpression: "paymentStatus <> :paid",
+                ExpressionAttributeValues: {
+                  ":shopId": input.order.shopId,
+                  ":paid": "PAID",
+                },
+              },
+            },
+            {
+              Update: {
+                TableName: this.tableName,
+                Key: keys.reservation(
+                  input.reservation.shopId,
+                  input.reservation.orderId,
+                  input.reservation.sku,
+                ),
+                UpdateExpression: "SET #status = :released",
+                ConditionExpression: "#status = :open",
+                ExpressionAttributeNames: { "#status": "status" },
+                ExpressionAttributeValues: {
+                  ":released": "released",
+                  ":open": "open",
+                },
+              },
+            },
+            {
+              Update: {
+                TableName: this.tableName,
+                Key: keys.inventory(input.inventory.shopId, input.inventory.sku),
+                UpdateExpression: release.update,
+                ConditionExpression: release.condition,
+                ExpressionAttributeValues: release.values,
+              },
+            },
+            {
+              Put: {
+                TableName: this.tableName,
+                Item: toEventItem(input.event),
+              },
+            },
+          ],
+        }),
+      );
+      return "released";
+    } catch (error) {
+      if (error instanceof TransactionCanceledException) {
+        return "skipped";
+      }
+      throw error;
+    }
+  }
+}
+
+function toOrderItem(order: OrderMirror): Record<string, unknown> {
+  return {
+    ...keys.order(order.shopId, order.id),
+    id: order.id,
+    shopId: order.shopId,
+    externalOrderId: order.externalOrderId,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    shippingStatus: order.shippingStatus,
+    items: order.items,
+    total: order.total,
+    createdAt: order.createdAt.toISOString(),
+    shippingAddress: order.shippingAddress,
+    codAmount: order.codAmount,
+    totalPaid: order.totalPaid,
+    trackingNumber: order.trackingNumber,
+    courierService: order.courierService,
+    pickupPoint: order.pickupPoint,
+    comment: order.comment,
+  };
 }
 
 function toOrder(item: Record<string, unknown>): OrderMirror {
@@ -114,4 +347,33 @@ function defaultAddress(): ShippingAddress {
     phone: "",
     email: "",
   };
+}
+
+function toReservationItem(reservation: Reservation): Record<string, unknown> {
+  const key = keys.reservation(reservation.shopId, reservation.orderId, reservation.sku);
+  return {
+    ...key,
+    gsi1sk: reservation.expiresAt.toISOString(),
+    shopId: reservation.shopId,
+    orderId: reservation.orderId,
+    sku: reservation.sku,
+    quantity: reservation.quantity,
+    expiresAt: reservation.expiresAt.toISOString(),
+    status: reservation.status,
+  };
+}
+
+function toEventItem(event: InventoryEvent): Record<string, unknown> {
+  const item: Record<string, unknown> = {
+    ...keys.inventoryEvent(event.shopId, event.sku, event.id),
+    id: event.id,
+    shopId: event.shopId,
+    sku: event.sku,
+    deltaOnHand: event.deltaOnHand,
+    deltaReserved: event.deltaReserved,
+    reason: event.reason,
+    createdAt: event.createdAt.toISOString(),
+  };
+  if (event.orderId !== undefined) item.orderId = event.orderId;
+  return item;
 }

@@ -6,8 +6,8 @@ function invKey(shopId: ShopId, sku: Sku): string {
   return `${shopId}#${sku}`;
 }
 
-function resKey(shopId: ShopId, orderId: OrderId): string {
-  return `${shopId}#${orderId}`;
+function resKey(shopId: ShopId, orderId: OrderId, sku: Sku): string {
+  return `${shopId}#${orderId}#${sku}`;
 }
 
 export class MemoryInventoryRepository implements InventoryRepository {
@@ -32,16 +32,25 @@ export class MemoryInventoryRepository implements InventoryRepository {
     return this.events.filter((e) => e.shopId === shopId && e.sku === sku);
   }
 
-  async getReservation(shopId: ShopId, orderId: OrderId) {
-    const found = this.reservations.get(resKey(shopId, orderId));
+  async getReservationLine(shopId: ShopId, orderId: OrderId, sku: Sku) {
+    const found = this.reservations.get(resKey(shopId, orderId, sku));
     return found ? { ...found, expiresAt: new Date(found.expiresAt) } : undefined;
   }
 
+  async listReservationsForOrder(shopId: ShopId, orderId: OrderId) {
+    return [...this.reservations.values()]
+      .filter((r) => r.shopId === shopId && r.orderId === orderId)
+      .map((r) => ({ ...r, expiresAt: new Date(r.expiresAt) }));
+  }
+
   async saveReservation(reservation: Reservation) {
-    this.reservations.set(resKey(reservation.shopId, reservation.orderId), {
-      ...reservation,
-      expiresAt: new Date(reservation.expiresAt),
-    });
+    this.reservations.set(
+      resKey(reservation.shopId, reservation.orderId, reservation.sku),
+      {
+        ...reservation,
+        expiresAt: new Date(reservation.expiresAt),
+      },
+    );
   }
 
   async listOpenExpired(shopId: ShopId, now: Date) {

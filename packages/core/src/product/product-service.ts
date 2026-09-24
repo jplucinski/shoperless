@@ -43,7 +43,7 @@ export class ProductService {
       status: input.status ?? "active",
       metadata: {},
     };
-    await this.deps.products.save(product);
+    await this.deps.products.save(product, { create: true });
     return product;
   }
 

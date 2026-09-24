@@ -53,6 +53,34 @@ describe("CartService.prepare", () => {
     });
   });
 
+  it("collapses duplicate sku lines before stock check", async () => {
+    const products = new MemoryProductRepository();
+    const inventory = new MemoryInventoryRepository();
+    const productService = new ProductService({ products, ids: new UlidGenerator() });
+    const stock = new InventoryService({
+      inventory,
+      clock: new FixedClock(new Date("2026-08-24T12:00:00.000Z")),
+      ids: new UlidGenerator(),
+    });
+    await productService.create({
+      shopId,
+      sku: "TOWEL-BLUE",
+      slug: "blue-towel",
+      name: "Blue Towel",
+      description: "",
+      images: [],
+      price: 19900,
+    });
+    await stock.applyDelivery(shopId, "TOWEL-BLUE", 1);
+    const cart = new CartService({ products, inventory });
+    await expect(
+      cart.prepare(shopId, [
+        { sku: "TOWEL-BLUE", quantity: 1 },
+        { sku: "TOWEL-BLUE", quantity: 1 },
+      ]),
+    ).rejects.toMatchObject({ code: "INSUFFICIENT_STOCK" });
+  });
+
   it("does not mutate inventory when stock is missing", async () => {
     const products = new MemoryProductRepository();
     const inventory = new MemoryInventoryRepository();

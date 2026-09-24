@@ -8,7 +8,7 @@ import {
 import type { OrderId, ShopId, Sku } from "../ids.ts";
 import type { Inventory, InventoryEvent, Reservation } from "../inventory/inventory.ts";
 import type { InventoryRepository } from "../inventory/inventory-repository.ts";
-import { keys, RESERVE_CONDITION } from "./keys.ts";
+import { inventoryReserveUpdate, keys } from "./keys.ts";
 
 export class DynamoInventoryRepository implements InventoryRepository {
   constructor(
@@ -36,6 +36,7 @@ export class DynamoInventoryRepository implements InventoryRepository {
           sku: inventory.sku,
           onHand: inventory.onHand,
           reserved: inventory.reserved,
+          version: inventory.version,
         },
       }),
     );
@@ -57,23 +58,36 @@ export class DynamoInventoryRepository implements InventoryRepository {
         KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
         ExpressionAttributeValues: {
           ":pk": `SHOP#${shopId}`,
-          ":sk": "INVEVT#",
+          ":sk": `INVEVT#${sku}#`,
         },
       }),
     );
-    return (result.Items ?? [])
-      .filter((item) => item.sku === sku)
-      .map(toEvent);
+    return (result.Items ?? []).map(toEvent);
   }
 
-  async getReservation(shopId: ShopId, orderId: OrderId) {
+  async getReservationLine(shopId: ShopId, orderId: OrderId, sku: Sku) {
     const result = await this.doc.send(
       new GetCommand({
         TableName: this.tableName,
-        Key: keys.reservation(shopId, orderId),
+        Key: keys.reservation(shopId, orderId, sku),
       }),
     );
     return result.Item ? toReservation(result.Item) : undefined;
+  }
+
+  async listReservationsForOrder(shopId: ShopId, orderId: OrderId) {
+    const prefix = `RESERVATION#${orderId}#`;
+    const result = await this.doc.send(
+      new QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: "pk = :pk AND begins_with(sk, :sk)",
+        ExpressionAttributeValues: {
+          ":pk": `SHOP#${shopId}`,
+          ":sk": prefix,
+        },
+      }),
+    );
+    return (result.Items ?? []).map(toReservation);
   }
 
   async saveReservation(reservation: Reservation) {
@@ -110,6 +124,7 @@ export class DynamoInventoryRepository implements InventoryRepository {
     event: InventoryEvent;
   }): Promise<void> {
     const invKey = keys.inventory(input.inventory.shopId, input.inventory.sku);
+    const reserve = inventoryReserveUpdate(input.inventory, input.quantity);
     await this.doc.send(
       new TransactWriteCommand({
         TransactItems: [
@@ -117,14 +132,9 @@ export class DynamoInventoryRepository implements InventoryRepository {
             Update: {
               TableName: this.tableName,
               Key: invKey,
-              UpdateExpression:
-                "SET reserved = reserved + :qty, shopId = :shopId, sku = :sku",
-              ConditionExpression: RESERVE_CONDITION,
-              ExpressionAttributeValues: {
-                ":qty": input.quantity,
-                ":shopId": input.inventory.shopId,
-                ":sku": input.inventory.sku,
-              },
+              UpdateExpression: reserve.update,
+              ConditionExpression: reserve.condition,
+              ExpressionAttributeValues: reserve.values,
             },
           },
           {
@@ -152,12 +162,13 @@ function toInventory(item: Record<string, unknown>): Inventory {
     sku: item.sku as Sku,
     onHand: item.onHand as number,
     reserved: item.reserved as number,
+    version: (item.version as number | undefined) ?? 0,
   };
 }
 
 function toEventItem(event: InventoryEvent): Record<string, unknown> {
   const item: Record<string, unknown> = {
-    ...keys.inventoryEvent(event.shopId, event.id),
+    ...keys.inventoryEvent(event.shopId, event.sku, event.id),
     id: event.id,
     shopId: event.shopId,
     sku: event.sku,
@@ -185,7 +196,7 @@ function toEvent(item: Record<string, unknown>): InventoryEvent {
 }
 
 function toReservationItem(reservation: Reservation): Record<string, unknown> {
-  const key = keys.reservation(reservation.shopId, reservation.orderId);
+  const key = keys.reservation(reservation.shopId, reservation.orderId, reservation.sku);
   return {
     ...key,
     gsi1sk: reservation.expiresAt.toISOString(),
