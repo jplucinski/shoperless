@@ -7,6 +7,7 @@ import { InventoryService } from "./inventory-service.ts";
 
 const shopId = "shop_seed";
 const sku = "TOWEL-BLUE";
+const sku2 = "TOWEL-RED";
 const now = new Date("2026-08-24T12:00:00.000Z");
 
 function service(ttl = 20 * 60 * 1000) {
@@ -27,7 +28,7 @@ describe("InventoryService", () => {
     expect(available(afterDelivery)).toBe(100);
     await stock.reserve(shopId, sku, 4, "ord_1");
     const current = await stock.reserve(shopId, sku, 1, "ord_2");
-    expect(available({ shopId, sku, onHand: 100, reserved: 5 })).toBe(95);
+    expect(available({ shopId, sku, onHand: 100, reserved: 5, version: 2 })).toBe(95);
     expect(current.quantity).toBe(1);
   });
 
@@ -53,6 +54,23 @@ describe("InventoryService", () => {
     expect(rejected).toHaveLength(1);
   });
 
+  it("reserves multiple skus on the same order", async () => {
+    const repo = new MemoryInventoryRepository();
+    const stock = new InventoryService({
+      inventory: repo,
+      clock: new FixedClock(now),
+      ids: new UlidGenerator(),
+    });
+    await stock.applyDelivery(shopId, sku, 5);
+    await stock.applyDelivery(shopId, sku2, 3);
+    await stock.reserve(shopId, sku, 2, "ord_multi");
+    await stock.reserve(shopId, sku2, 1, "ord_multi");
+    const lines = await repo.listReservationsForOrder(shopId, "ord_multi");
+    expect(lines).toHaveLength(2);
+    expect(await repo.get(shopId, sku)).toMatchObject({ onHand: 5, reserved: 2 });
+    expect(await repo.get(shopId, sku2)).toMatchObject({ onHand: 3, reserved: 1 });
+  });
+
   it("confirmSale decrements onHand once even when called twice", async () => {
     const repo = new MemoryInventoryRepository();
     const stock = new InventoryService({
@@ -65,10 +83,10 @@ describe("InventoryService", () => {
     await stock.confirmSale(shopId, "ord_1");
     await stock.confirmSale(shopId, "ord_1");
     const inv = await repo.get(shopId, sku);
-    expect(inv).toEqual({ shopId, sku, onHand: 8, reserved: 0 });
+    expect(inv).toMatchObject({ onHand: 8, reserved: 0 });
   });
 
-  it("releaseExpired restores reserved without changing onHand", async () => {
+  it("confirmSale after expiry still decrements onHand for late PAID", async () => {
     const repo = new MemoryInventoryRepository();
     const clock = new FixedClock(now);
     const stock = new InventoryService({
@@ -78,12 +96,25 @@ describe("InventoryService", () => {
       reservationTtlMs: 0,
     });
     await stock.applyDelivery(shopId, sku, 10);
-    await stock.reserve(shopId, sku, 2, "ord_exp");
-    const released = await stock.releaseExpired(shopId);
-    expect(released).toBe(1);
+    await stock.reserve(shopId, sku, 2, "ord_late");
+    await stock.release(shopId, "ord_late");
+    await stock.confirmSale(shopId, "ord_late");
     const inv = await repo.get(shopId, sku);
-    expect(inv).toEqual({ shopId, sku, onHand: 10, reserved: 0 });
-    expect(await stock.releaseExpired(shopId)).toBe(0);
+    expect(inv).toMatchObject({ onHand: 8, reserved: 0 });
+  });
+
+  it("release restores reserved without changing onHand", async () => {
+    const repo = new MemoryInventoryRepository();
+    const stock = new InventoryService({
+      inventory: repo,
+      clock: new FixedClock(now),
+      ids: new UlidGenerator(),
+    });
+    await stock.applyDelivery(shopId, sku, 10);
+    await stock.reserve(shopId, sku, 2, "ord_exp");
+    await stock.release(shopId, "ord_exp");
+    const inv = await repo.get(shopId, sku);
+    expect(inv).toMatchObject({ onHand: 10, reserved: 0 });
   });
 
   it("listEvents returns delivery then adjustment in order", async () => {

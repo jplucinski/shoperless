@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { SEED_SHOP_ID } from "@liteshop/core";
+import { DEFAULT_PREPARE_TTL_MS, SEED_SHOP_ID } from "@liteshop/core";
 import { toCheckoutCartData } from "@liteshop/furgonetka";
 import { z } from "zod";
 import { createServices } from "../../../lib/core.ts";
@@ -18,14 +18,25 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const json: unknown = await request.json();
     const { items } = bodySchema.parse(json);
-    const { cart, logger } = createServices();
+    const { cart, snapshots, ids, clock, logger } = createServices();
     const prepared = await cart.prepare(SEED_SHOP_ID, items);
+    const prepareId = ids.prepareId();
+    const expiresAt = new Date(clock.now().getTime() + DEFAULT_PREPARE_TTL_MS);
+    await snapshots.save({
+      shopId: SEED_SHOP_ID,
+      prepareId,
+      lines: prepared.lines,
+      total: prepared.total,
+      currency: prepared.currency,
+      expiresAt,
+    });
     logger.info({
       shopId: SEED_SHOP_ID,
       operation: "checkout.prepare",
+      externalOrderId: prepareId,
       correlationId: crypto.randomUUID(),
     });
-    return new Response(JSON.stringify(toCheckoutCartData(prepared)), {
+    return new Response(JSON.stringify(toCheckoutCartData(prepared, prepareId)), {
       status: 200,
       headers: { "content-type": "application/json" },
     });

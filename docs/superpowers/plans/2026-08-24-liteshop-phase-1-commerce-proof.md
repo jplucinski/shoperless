@@ -19,7 +19,9 @@ Inherited from Phase 0, plus:
 - Hardcoded storefront only. Do not create `@liteshop/schema` or `@liteshop/renderer`.
 - `available` is never written to DynamoDB.
 - Client may send only `{ sku, quantity }`. Server snapshots `unitPrice` from Product at order creation.
-- Duplicate `externalOrderId` returns the existing Order Mirror and does not reserve again.
+- Duplicate `cartId` (stored as `externalOrderId` on the Order Mirror) returns the existing Order Mirror and does not reserve again.
+- Reservations are one line per sku: `RESERVATION#{orderId}#{sku}`. `confirmSale` on a `released` line still decrements `onHand` (late PAID).
+- Cron calls `OrderService.releaseExpiredReservations` — never releases stock for orders already `PAID`.
 - Duplicate PAID callback is a no-op: `onHand` decreases once.
 - Provider payment status names stay inside `@liteshop/furgonetka`.
 - Admin until Task 12 uses env password cookie `ls_admin`. Task 12 replaces login with Furgonetka OAuth but keeps the same `ls_session` cookie shape.
@@ -348,7 +350,8 @@ export interface InventoryRepository {
   save(inventory: Inventory): Promise<void>;
   appendEvent(event: InventoryEvent): Promise<void>;
   listEvents(shopId: ShopId, sku: Sku): Promise<InventoryEvent[]>;
-  getReservation(shopId: ShopId, orderId: OrderId): Promise<Reservation | undefined>;
+  getReservationLine(shopId: ShopId, orderId: OrderId, sku: Sku): Promise<Reservation | undefined>;
+  listReservationsForOrder(shopId: ShopId, orderId: OrderId): Promise<Reservation[]>;
   saveReservation(reservation: Reservation): Promise<void>;
   listOpenExpired(shopId: ShopId, now: Date): Promise<Reservation[]>;
 }
@@ -383,8 +386,9 @@ Rules the tests lock:
 - `available` is computed, never stored.
 - `reserve` succeeds only when `onHand - reserved >= quantity`; it increments `reserved` (not `onHand`) and writes `RESERVATION`.
 - Concurrent reserves on the last unit: in-memory repo must serialize `reserve` per `shopId+sku` (async mutex). One succeeds, one throws `INSUFFICIENT_STOCK`.
-- `confirmSale` decrements both `onHand` and `reserved` by the reservation quantity, writes `SALE`, marks reservation `sold`. Second call with the same `orderId` is a no-op.
-- `release` / expiry decrements `reserved` only, writes `RESERVATION_RELEASED`. `onHand` unchanged. Second release is a no-op.
+- `confirmSale` iterates all reservation lines for `orderId`. Open lines decrement `onHand` and `reserved`; `released` lines decrement `onHand` only (late PAID). Marks each line `sold`. Second call is a no-op.
+- `release` / expiry decrements `reserved` only per open line, writes `RESERVATION_RELEASED`. `onHand` unchanged. Second release is a no-op.
+- `releaseExpiredReservations` on `OrderService` skips orders with `paymentStatus === PAID`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -728,40 +732,58 @@ EOF
 
 **Interfaces:**
 - Consumes: `CartService.prepare`, `InventoryService.reserve`, `InventoryService.confirmSale`, `InventoryService.release`, `IdGenerator.orderId`, `Clock`
-- Produces:
+- Produces (matches captured Koszyk shop API — do not regress to `externalOrderId`-only payment lookup):
 
 ```ts
-export type OrderStatus = "CREATED" | "CANCELLED";
-export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "CANCELLED";
-export type ShippingStatus = "NOT_SHIPPED" | "IN_TRANSIT" | "DELIVERED";
-
-export interface OrderItem {
-  sku: Sku;
-  quantity: number;
-  unitPrice: Money;
+export interface ShippingAddress {
+  street: string;
+  city: string;
+  postcode: string;
+  countryCode: string;
+  phone: string;
+  email: string;
+  company?: string | null;
+  name?: string | null;
+  surname?: string | null;
 }
 
 export interface OrderMirror {
   id: OrderId;
   shopId: ShopId;
+  /** cartId from inbound; EXTORDER idempotency key */
   externalOrderId: string;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
   shippingStatus: ShippingStatus;
   items: OrderItem[];
-  total: Money;
+  total: Money; // merchandise only
+  createdAt: Date;
+  shippingAddress: ShippingAddress;
+  codAmount: Money;
+  totalPaid: Money; // charged amount from payment inbound
+  trackingNumber?: string;
+  courierService?: string;
+  pickupPoint?: string;
+  comment?: string;
 }
 
 export interface CreateOrderCommand {
   shopId: ShopId;
-  externalOrderId: string;
+  cartId?: string;
   items: CartItem[];
+  shippingAddress: ShippingAddress;
+  codAmount?: Money;
+  datetimeOrder?: string;
+  service?: string;
+  pickupPoint?: string;
+  comment?: string;
 }
 
 export interface ApplyPaymentCommand {
   shopId: ShopId;
-  externalOrderId: string;
+  orderId: OrderId; // sourceOrderId from POST orders/{id}/payments
   paymentStatus: PaymentStatus;
+  paidAmount?: Money;
 }
 
 export interface OrderRepository {
@@ -769,6 +791,10 @@ export interface OrderRepository {
   getByExternalId(shopId: ShopId, externalOrderId: string): Promise<OrderMirror | undefined>;
   save(order: OrderMirror): Promise<void>;
   list(shopId: ShopId): Promise<OrderMirror[]>;
+  transactCreateOrder?(input: {
+    order: OrderMirror;
+    reserveLines: ReserveLineTransact[];
+  }): Promise<"created" | "duplicate">;
 }
 
 export class OrderService {
@@ -777,9 +803,11 @@ export class OrderService {
     cart: CartService;
     stock: InventoryService;
     ids: IdGenerator;
+    clock: Clock;
   });
   createFromExternal(cmd: CreateOrderCommand): Promise<{ order: OrderMirror; created: boolean }>;
   applyPayment(cmd: ApplyPaymentCommand): Promise<OrderMirror>;
+  releaseExpiredReservations(shopId: ShopId): Promise<number>;
   list(shopId: ShopId): Promise<OrderMirror[]>;
   get(shopId: ShopId, orderId: OrderId): Promise<OrderMirror>;
 }
@@ -892,21 +920,20 @@ Expected: FAIL with missing module.
 
 `createFromExternal`:
 
-1. `getByExternalId` → if found, return `{ order, created: false }`.
-2. `prepared = await cart.prepare(shopId, items)`.
-3. `id = ids.orderId()`.
-4. For each prepared line, `stock.reserve(shopId, line.sku, line.quantity, id)`. If a later line fails, `release` the new order id (best-effort; single-sku MVP can reserve after prepare because prepare already checked availability — still reserve in a loop).
-5. Save Order Mirror `CREATED` / `PENDING` / `NOT_SHIPPED`, `items` from prepared lines, `total` from prepared.
+1. `getByExternalId(cartId)` → if found, return `{ order, created: false }`.
+2. `prepared = await cart.prepare(shopId, items)` (collapses duplicate skus).
+3. `id = ids.orderId()`. Build `OrderMirror` with `externalOrderId = cartId ?? id`, address/COD from inbound.
+4. If `orders.transactCreateOrder` exists (Dynamo): one `TransactWrite` puts `EXTORDER` + `ORDER` + all `RESERVATION#{orderId}#{sku}` lines with inventory OCC. Duplicate inbound → `duplicate`, no extra reserve.
+5. Else (memory): loop `stock.reserve` per line; on failure `release(orderId)`; then `orders.save`.
 
 `applyPayment`:
 
-1. Load by external id or throw `DomainError("ORDER_NOT_FOUND")`.
-2. If `paymentStatus` already equals command, return order.
-3. If current is `PAID`, ignore later FAILED/CANCELLED (paid is terminal for inventory).
-4. `PAID` → `stock.confirmSale` then set `paymentStatus: "PAID"`.
-5. `FAILED` or `CANCELLED` → `stock.release`, set that payment status, `status: "CANCELLED"` if CANCELLED.
+1. Load by `orderId` (Furgonetka `sourceOrderId` from path) or throw `ORDER_NOT_FOUND`.
+2. Idempotent: same status → return; already `PAID` → ignore later FAILED/CANCELLED.
+3. `PAID` → `stock.confirmSale` (all lines; late PAID after expiry still decrements `onHand`) then set `paymentStatus` + `totalPaid = paidAmount`.
+4. `FAILED` / `CANCELLED` → `stock.release` all open lines.
 
-Phase 1 is single-sku lines in tests; implementation must still loop items for the 10-product catalog later.
+Tests must cover: duplicate `cartId`, concurrent duplicate create, two-sku cart, expire-then-PAID, `releaseExpiredReservations` skipping `PAID`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -1040,27 +1067,44 @@ EOF
 
 **Interfaces:**
 - Consumes: `PreparedCheckout`, `CreateOrderCommand`, `ApplyPaymentCommand`, `PaymentStatus` from `@liteshop/core`
-- Produces:
+- Produces (implemented in `inbound.ts` + `inbound-http.ts` + `shop-api.ts`):
 
 ```ts
 export function verifySharedKey(headerValue: string | null, expected: string): boolean;
-
 export function toCheckoutCartData(prepared: PreparedCheckout): CheckoutCartData;
-
 export function mapProviderPaymentStatus(providerStatus: string): PaymentStatus;
 
-export function parseInboundOrder(
-  body: unknown,
-  shopId: ShopId,
-): CreateOrderCommand;
+/** Parses captured add-order fixture → CreateOrderCommand with cartId, items, shippingAddress, codAmount */
+export function parseAddOrder(body: unknown, shopId: ShopId): CreateOrderCommand;
 
-export function parseInboundPayment(
+/** Parses payment body; orderId comes from route POST orders/{sourceOrderId}/payments */
+export function parseAddPayment(
   body: unknown,
   shopId: ShopId,
+  sourceOrderId: string,
 ): ApplyPaymentCommand;
 
-export function furgonetkaOrderUrl(externalOrderId: string): string;
+export function parseTrackingNumber(
+  body: unknown,
+  shopId: ShopId,
+  sourceOrderId: string,
+): ApplyTrackingCommand;
+
+export function parseFurgonetkaRoute(path: string): FurgonetkaRoute | undefined;
+
+export function handleFurgonetkaInbound(input: InboundRequest): Promise<InboundResponse>;
 ```
+
+**Inbound HTTP semantics** (`inbound-http.ts` — after fixture capture):
+
+| Case | Status | Body |
+|------|--------|------|
+| bad shared key | 401 | `{ error: "unauthorized" }` |
+| invalid body | 400 | `{ error: "invalid_body" }` |
+| unknown payment status | 400 | `{ error: "invalid_payment_status" }` |
+| ORDER_CREATED oversell | 409 | `{ error: "insufficient_stock" }` |
+| payment before order exists | 503 | `{ error: "order_not_ready" }` (retryable) |
+| other server fault | 500 | `{ error: "internal_error" }` |
 
 Contract capture procedure (do this before writing Zod schemas — the captured file is the source of truth):
 
@@ -1189,21 +1233,29 @@ export const keys = {
     pk: `SHOP#${shopId}`,
     sk: `EXTORDER#${externalOrderId}`,
   }),
-  reservation: (shopId: string, orderId: string) => ({
+  productSku: (shopId: string, sku: string) => ({
     pk: `SHOP#${shopId}`,
-    sk: `RESERVATION#${orderId}`,
+    sk: `SKU#${sku}`,
+  }),
+  inventoryEvent: (shopId: string, sku: string, eventId: string) => ({
+    pk: `SHOP#${shopId}`,
+    sk: `INVEVT#${sku}#${eventId}`,
+  }),
+  reservation: (shopId: string, orderId: string, sku: string) => ({
+    pk: `SHOP#${shopId}`,
+    sk: `RESERVATION#${orderId}#${sku}`,
     gsi1pk: `SHOP#${shopId}#RESERVATION`,
   }),
 };
-```
 
-`InventoryRepository.save` for reserve uses DynamoDB `ConditionExpression` on the inventory item:
+`inventoryReserveUpdate(inventory, qty)` builds OCC:
 
 ```text
-attribute_not_exists(pk) OR (onHand - reserved >= :qty)
+ConditionExpression: version = :expectedVersion AND onHand >= :minOnHand
+UpdateExpression: SET reserved = reserved + :qty, version = version + 1, ...
 ```
 
-and a `TransactWrite` that also puts `RESERVATION#{orderId}` with `attribute_not_exists(pk)` so two concurrent last-unit buys cannot both commit.
+`OrderRepository.transactCreateOrder` uses one `TransactWrite`: `EXTORDER` (`attribute_not_exists`) + `ORDER` + per-line reserve updates + `RESERVATION#{orderId}#{sku}` puts. Do not map all transact failures to `INSUFFICIENT_STOCK` — only inventory condition failures.
 
 Do **not** unit-test this adapter with real AWS. Core concurrency is already proven in Task 2. Optionally add a test that the `ConditionExpression` string constants exist.
 
@@ -1248,12 +1300,13 @@ EOF
 - Create: `apps/web/src/pages/api/checkout/prepare.ts`
 - Create: `apps/web/src/pages/api/furgonetka/[...path].ts`
 - Create: `apps/web/src/lib/http.ts`
+- Create: `packages/furgonetka/src/koszyk/inbound-http.ts` (route dispatch + HTTP semantics)
 
 **Interfaces:**
-- Consumes: `CartService.prepare`, `OrderService.createFromExternal`, `OrderService.applyPayment`, `verifySharedKey`, `parseInboundOrder`, `parseInboundPayment`, `mapProviderPaymentStatus`, `toCheckoutCartData`, `Resource.KoszykSharedKey.value`
+- Consumes: `CartService.prepare`, `OrderService` (`createFromExternal`, `applyPayment`, `applyTracking`, `listSince`), `handleFurgonetkaInbound`, `Resource.KoszykSharedKey.value`
 - Produces:
   - `POST /api/checkout/prepare` body `{ items: CartItem[] }` → `200` `CheckoutCartData` or `409` `{ code, message }`
-  - Inbound routes: whatever paths were captured in Task 6, mounted under `/api/furgonetka/*`. Auth header must match the captured header name. `401` if `verifySharedKey` fails. Order handler returns the JSON response shape from the Furgonetka order-inbound docs (not a LiteShop error page).
+  - Inbound routes from Task 6 fixtures, mounted under `/api/furgonetka/*`. Thin Astro handler delegates to `handleFurgonetkaInbound`. See Task 6 HTTP semantics table for status codes (503 payment-before-order is retryable).
 
 - [ ] **Step 1: Write a node test for the 409 mapping**
 
@@ -1281,7 +1334,7 @@ describe("toHttpError", () => {
 
 `prepare.ts` uses `SEED_SHOP_ID`, parses `{ items }` with Zod `{ sku: string, quantity: number.int().positive() }[]`, calls `cart.prepare`, returns `toCheckoutCartData`.
 
-`[...path].ts`: verify key, switch on captured path. Order → `createFromExternal`. Payment → `mapProviderPaymentStatus` then `applyPayment`.
+`[...path].ts`: delegate to `handleFurgonetkaInbound` with `orders: OrderService`. Payment route uses `sourceOrderId` from path → `applyPayment({ orderId })`.
 
 - [ ] **Step 3: Run `pnpm --filter @liteshop/web test` — PASS**
 
@@ -1305,8 +1358,8 @@ EOF
 - Test: `packages/core/src/inventory/inventory-service.test.ts` already covers `releaseExpired`; add a job unit test that calls `InventoryService.releaseExpired(SEED_SHOP_ID)`
 
 **Interfaces:**
-- Consumes: `InventoryService.releaseExpired`, `SEED_SHOP_ID`
-- Produces: Cron handler returns `{ released: number }` and logs `reservation.release`
+- Consumes: `OrderService.releaseExpiredReservations`, `SEED_SHOP_ID`
+- Produces: Cron handler returns `{ released: number }` and logs `reservation.release`. Skips orders already `PAID`.
 
 - [ ] **Step 1: Replace placeholder handler**
 
@@ -1315,8 +1368,8 @@ import { SEED_SHOP_ID } from "@liteshop/core";
 import { createServices } from "../lib/core.ts";
 
 export async function handler() {
-  const { stock, logger } = createServices();
-  const released = await stock.releaseExpired(SEED_SHOP_ID);
+  const { orders, logger } = createServices();
+  const released = await orders.releaseExpiredReservations(SEED_SHOP_ID);
   logger.info({
     shopId: SEED_SHOP_ID,
     operation: "reservation.release",
@@ -1572,15 +1625,25 @@ EOF
 
 ## Phase 1 gate
 
-A real sandbox purchase, not a mocked handler:
+A real sandbox purchase **plus** automated commerce-proof tests (`pnpm test`):
+
+**Sandbox (manual):**
 
 1. Seed `TOWEL-BLUE` with `onHand >= 1`.
 2. Storefront add to cart → Kasa → Furgonetka Koszyk sandbox payment.
 3. Admin shows Order Mirror `paymentStatus: PAID`.
 4. Inventory `onHand` decreased by the bought quantity exactly once.
 5. Replay the payment inbound request (same body, same key) → `onHand` unchanged.
-6. `pnpm test` green for core + furgonetka + web.
 
-Do not start Phase 2 until step 2–5 are evidenced (log lines with `operation: "payment.apply"` and the admin screenshot or curl of `GET` order JSON).
+**Automated (must pass in CI):**
+
+6. Concurrent duplicate `ORDER_CREATED` with same `cartId` → one order, one reserve.
+7. Two-SKU cart → both `onHand` values drop once on PAID.
+8. Last-unit concurrent reserves → exactly one succeeds.
+9. `releaseExpired` then PAID → `onHand` still decreases (late payment).
+10. Payment inbound with unknown `orderId` → `503 order_not_ready` (retryable).
+11. `pnpm test` green for core + furgonetka + web.
+
+Do not start Phase 2 until sandbox steps 2–5 are evidenced **and** automated steps 6–11 pass.
 
 Next: [2026-08-24-liteshop-phase-2-store-definition.md](./2026-08-24-liteshop-phase-2-store-definition.md)

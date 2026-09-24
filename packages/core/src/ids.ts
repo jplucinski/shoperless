@@ -11,6 +11,7 @@ export interface IdGenerator {
   productId(): ProductId;
   orderId(): OrderId;
   eventId(): string;
+  prepareId(): string;
 }
 
 const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -54,5 +55,8 @@ export class UlidGenerator implements IdGenerator {
   }
   eventId(): string {
     return `evt_${ulid()}`;
+  }
+  prepareId(): string {
+    return `prep_${ulid()}`;
   }
 }

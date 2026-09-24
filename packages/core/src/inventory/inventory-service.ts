@@ -6,6 +6,10 @@ import type { InventoryRepository } from "./inventory-repository.ts";
 
 export const DEFAULT_RESERVATION_TTL_MS = 20 * 60 * 1000;
 
+function zeroInventory(shopId: ShopId, sku: Sku): Inventory {
+  return { shopId, sku, onHand: 0, reserved: 0, version: 0 };
+}
+
 export class InventoryService {
   private readonly repo: InventoryRepository;
   private readonly clock: Clock;
@@ -26,27 +30,17 @@ export class InventoryService {
   }
 
   async get(shopId: ShopId, sku: Sku): Promise<Inventory> {
-    return (
-      (await this.repo.get(shopId, sku)) ?? {
-        shopId,
-        sku,
-        onHand: 0,
-        reserved: 0,
-      }
-    );
+    const found = await this.repo.get(shopId, sku);
+    return found ?? zeroInventory(shopId, sku);
   }
 
   async applyDelivery(shopId: ShopId, sku: Sku, quantity: number): Promise<Inventory> {
     if (quantity <= 0) {
       throw new DomainError("INVALID_QUANTITY", "delivery quantity must be positive");
     }
-    const current = (await this.repo.get(shopId, sku)) ?? {
-      shopId,
-      sku,
-      onHand: 0,
-      reserved: 0,
-    };
+    const current = (await this.repo.get(shopId, sku)) ?? zeroInventory(shopId, sku);
     current.onHand += quantity;
+    current.version += 1;
     await this.repo.save(current);
     await this.repo.appendEvent({
       id: this.ids.eventId(),
@@ -65,12 +59,7 @@ export class InventoryService {
     sku: Sku,
     deltaOnHand: number,
   ): Promise<Inventory> {
-    const current = (await this.repo.get(shopId, sku)) ?? {
-      shopId,
-      sku,
-      onHand: 0,
-      reserved: 0,
-    };
+    const current = (await this.repo.get(shopId, sku)) ?? zeroInventory(shopId, sku);
     if (current.onHand + deltaOnHand < current.reserved) {
       throw new DomainError(
         "INVALID_ADJUSTMENT",
@@ -78,6 +67,7 @@ export class InventoryService {
       );
     }
     current.onHand += deltaOnHand;
+    current.version += 1;
     await this.repo.save(current);
     await this.repo.appendEvent({
       id: this.ids.eventId(),
@@ -100,11 +90,11 @@ export class InventoryService {
     const mutexKey = `${shopId}#${sku}`;
     const run = async () => {
       const inv = await this.repo.get(shopId, sku);
-      const current = inv ?? { shopId, sku, onHand: 0, reserved: 0 };
+      const current = inv ?? zeroInventory(shopId, sku);
       if (current.onHand - current.reserved < quantity) {
         throw new InsufficientStockError(sku, quantity);
       }
-      const existing = await this.repo.getReservation(shopId, orderId);
+      const existing = await this.repo.getReservationLine(shopId, orderId, sku);
       if (existing) return existing;
       const reservation: Reservation = {
         shopId,
@@ -138,6 +128,7 @@ export class InventoryService {
         return reservation;
       }
       current.reserved += quantity;
+      current.version += 1;
       await this.repo.save(current);
       await this.repo.saveReservation(reservation);
       await this.repo.appendEvent(event);
@@ -158,11 +149,14 @@ export class InventoryService {
   }
 
   async confirmSale(shopId: ShopId, orderId: OrderId): Promise<void> {
-    const reservation = await this.repo.getReservation(shopId, orderId);
-    if (!reservation) {
-      throw new DomainError("RESERVATION_NOT_FOUND", `reservation not found: ${orderId}`);
+    const lines = await this.repo.listReservationsForOrder(shopId, orderId);
+    for (const line of lines) {
+      await this.confirmSaleLine(shopId, line);
     }
-    if (reservation.status !== "open") {
+  }
+
+  private async confirmSaleLine(shopId: ShopId, reservation: Reservation): Promise<void> {
+    if (reservation.status === "sold") {
       return;
     }
     const inv = await this.repo.get(shopId, reservation.sku);
@@ -170,8 +164,17 @@ export class InventoryService {
       throw new DomainError("INVENTORY_NOT_FOUND", `inventory not found: ${reservation.sku}`);
     }
     const qty = reservation.quantity;
-    inv.onHand -= qty;
-    inv.reserved -= qty;
+    let deltaReserved = 0;
+    if (reservation.status === "open") {
+      inv.onHand -= qty;
+      inv.reserved -= qty;
+      deltaReserved = -qty;
+    } else if (reservation.status === "released") {
+      inv.onHand -= qty;
+    } else {
+      return;
+    }
+    inv.version += 1;
     reservation.status = "sold";
     await this.repo.save(inv);
     await this.repo.saveReservation(reservation);
@@ -180,16 +183,22 @@ export class InventoryService {
       shopId,
       sku: reservation.sku,
       deltaOnHand: -qty,
-      deltaReserved: -qty,
+      deltaReserved,
       reason: "SALE",
-      orderId,
+      orderId: reservation.orderId,
       createdAt: this.clock.now(),
     });
   }
 
   async release(shopId: ShopId, orderId: OrderId): Promise<void> {
-    const reservation = await this.repo.getReservation(shopId, orderId);
-    if (!reservation || reservation.status !== "open") {
+    const lines = await this.repo.listReservationsForOrder(shopId, orderId);
+    for (const line of lines) {
+      await this.releaseLine(shopId, line);
+    }
+  }
+
+  private async releaseLine(shopId: ShopId, reservation: Reservation): Promise<void> {
+    if (reservation.status !== "open") {
       return;
     }
     const inv = await this.repo.get(shopId, reservation.sku);
@@ -198,6 +207,7 @@ export class InventoryService {
     }
     const qty = reservation.quantity;
     inv.reserved -= qty;
+    inv.version += 1;
     reservation.status = "released";
     await this.repo.save(inv);
     await this.repo.saveReservation(reservation);
@@ -208,17 +218,17 @@ export class InventoryService {
       deltaOnHand: 0,
       deltaReserved: -qty,
       reason: "RESERVATION_RELEASED",
-      orderId,
+      orderId: reservation.orderId,
       createdAt: this.clock.now(),
     });
   }
 
-  async releaseExpired(shopId: ShopId): Promise<number> {
-    const expired = await this.repo.listOpenExpired(shopId, this.clock.now());
-    for (const reservation of expired) {
-      await this.release(shopId, reservation.orderId);
-    }
-    return expired.length;
+  async listOpenExpiredReservations(shopId: ShopId): Promise<Reservation[]> {
+    return this.repo.listOpenExpired(shopId, this.clock.now());
+  }
+
+  async listReservationsForOrder(shopId: ShopId, orderId: OrderId): Promise<Reservation[]> {
+    return this.repo.listReservationsForOrder(shopId, orderId);
   }
 
   async listEvents(shopId: ShopId, sku: Sku) {

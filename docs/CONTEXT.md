@@ -44,7 +44,7 @@ On-hand and reserved quantity for one sku in one Shop. Field names: `onHand`, `r
 _Avoid_: stock record, warehouse, `available` as a stored field, `onHand` as a second name
 
 **Reservation**:
-A time-bounded hold of quantity for one Order Mirror. Expires unless payment is confirmed.
+A time-bounded hold of quantity for one sku on one Order Mirror (one line per sku). Expires unless payment is confirmed; late PAID still decrements `onHand`.
 _Avoid_: lock, allocation, hold (as a stored available field)
 
 **Order Mirror**:

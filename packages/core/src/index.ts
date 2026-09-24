@@ -37,6 +37,12 @@ export {
 } from "./inventory/inventory-service.ts";
 export type { CartItem, PreparedCheckout, PreparedLine } from "./cart/cart.ts";
 export { CartService } from "./cart/cart-service.ts";
+export {
+  DEFAULT_PREPARE_TTL_MS,
+  type PreparedCheckoutSnapshot,
+} from "./cart/prepare-snapshot.ts";
+export type { PrepareSnapshotRepository } from "./cart/prepare-snapshot-repository.ts";
+export { MemoryPrepareSnapshotRepository } from "./cart/memory-prepare-snapshot-repository.ts";
 export type {
   ApplyPaymentCommand,
   ApplyTrackingCommand,
@@ -56,8 +62,18 @@ export {
   type CommerceLog,
   type Logger,
 } from "./logging.ts";
-export { keys, RESERVE_CONDITION } from "./dynamo/keys.ts";
+export {
+  keys,
+  inventoryReserveUpdate,
+  inventoryConfirmSaleUpdate,
+  inventoryReleaseUpdate,
+} from "./dynamo/keys.ts";
+export type {
+  ReserveLineTransact,
+  ConfirmSaleLineTransact,
+} from "./order/order-repository.ts";
 export { DynamoProductRepository } from "./dynamo/dynamo-product-repository.ts";
 export { DynamoInventoryRepository } from "./dynamo/dynamo-inventory-repository.ts";
 export { DynamoOrderRepository } from "./dynamo/dynamo-order-repository.ts";
+export { DynamoPrepareSnapshotRepository } from "./dynamo/dynamo-prepare-snapshot-repository.ts";
 export type { FurgonetkaConnection } from "./connection/furgonetka-connection.ts";

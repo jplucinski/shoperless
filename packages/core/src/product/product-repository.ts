@@ -6,5 +6,5 @@ export interface ProductRepository {
   getBySku(shopId: ShopId, sku: Sku): Promise<Product | undefined>;
   getBySlug(shopId: ShopId, slug: string): Promise<Product | undefined>;
   list(shopId: ShopId): Promise<Product[]>;
-  save(product: Product): Promise<void>;
+  save(product: Product, options?: { create?: boolean }): Promise<void>;
 }

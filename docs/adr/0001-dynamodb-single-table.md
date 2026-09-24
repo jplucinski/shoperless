@@ -10,11 +10,14 @@ One table `Table` with `pk` + `sk` and GSI `gsi1` (`gsi1pk` + `gsi1sk`). Keys:
 
 - `SHOP#{shopId}` / `META`
 - `SHOP#{shopId}` / `PRODUCT#{productId}`
-- `SHOP#{shopId}` / `INVENTORY#{sku}`
-- `SHOP#{shopId}` / `INVEVT#{eventId}`
+- `SHOP#{shopId}` / `SKU#{sku}` (uniqueness pointer → `productId`)
+- `SHOP#{shopId}` / `SLUG#{slug}` (uniqueness pointer → `productId`)
+- `SHOP#{shopId}` / `PREPARE#{prepareId}` (checkout price snapshot)
+- `SHOP#{shopId}` / `INVENTORY#{sku}` (includes `version` for optimistic concurrency)
+- `SHOP#{shopId}` / `INVEVT#{sku}#{eventId}`
 - `SHOP#{shopId}` / `ORDER#{orderId}`
 - `SHOP#{shopId}` / `EXTORDER#{externalOrderId}`
-- `SHOP#{shopId}` / `RESERVATION#{orderId}`
+- `SHOP#{shopId}` / `RESERVATION#{orderId}#{sku}` (one line per sku on the order)
 - `SHOP#{shopId}` / `FURGONETKA`
 - `SESSION#{sessionId}` / `META`
 - later: `SHOP#{shopId}` / `STORE#DRAFT`, `STORE#VERSION#{n}`, `STORE#PUBLISHED`
@@ -23,6 +26,8 @@ GSI1:
 
 - products by slug: `gsi1pk = SHOP#{shopId}#SLUG`, `gsi1sk = {slug}`
 - reservations by expiry: `gsi1pk = SHOP#{shopId}#RESERVATION`, `gsi1sk = {expiresAtIso}`
+
+`ORDER_CREATED` uses a `TransactWrite` that puts `EXTORDER` (`attribute_not_exists`), `ORDER`, and all reservation lines atomically. `PAYMENT_PAID` uses a `TransactWrite` that conditionally sets `ORDER.paymentStatus = PAID` and confirms all reservation lines. Inventory reserve uses `version` + `onHand >= reserved + qty` — never store derived `available`.
 
 PRD §42 lists **entities**, not physical keys. `PRODUCT#BLUE` in the PRD example is conceptual; the item key uses `productId`, inventory uses `sku`.
 

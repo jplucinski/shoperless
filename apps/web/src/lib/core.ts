@@ -4,6 +4,7 @@ import {
   CartService,
   DynamoInventoryRepository,
   DynamoOrderRepository,
+  DynamoPrepareSnapshotRepository,
   DynamoProductRepository,
   InventoryService,
   OrderService,
@@ -25,6 +26,7 @@ export function createServices() {
   const products = new DynamoProductRepository(doc, tableName);
   const inventory = new DynamoInventoryRepository(doc, tableName);
   const orders = new DynamoOrderRepository(doc, tableName);
+  const snapshots = new DynamoPrepareSnapshotRepository(doc, tableName);
   const productService = new ProductService({ products, ids });
   const stock = new InventoryService({ inventory, clock, ids });
   const cart = new CartService({ products, inventory });
@@ -33,6 +35,8 @@ export function createServices() {
     cart,
     stock,
     ids,
+    clock,
+    snapshots,
     logger,
   });
   return {
@@ -40,6 +44,9 @@ export function createServices() {
     stock,
     cart,
     orders: orderService,
+    snapshots,
+    ids,
+    clock,
     logger,
   };
 }

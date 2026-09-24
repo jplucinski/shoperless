@@ -25,7 +25,7 @@ export class MemoryProductRepository implements ProductRepository {
   async list(shopId: ShopId) {
     return [...this.byId.values()].filter((p) => p.shopId === shopId);
   }
-  async save(product: Product) {
+  async save(product: Product, _options?: { create?: boolean }) {
     this.byId.set(key(product.shopId, product.id), product);
   }
 }
