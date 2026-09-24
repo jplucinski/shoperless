@@ -43,35 +43,87 @@ function plateTitle(product: Product) {
           </a>
         </div>
         {featured && (
-          <a href={`/products/${featured.slug}`} class="home-feature reveal">
+          <div class="home-feature reveal">
+            <a href={`/products/${featured.slug}`} class="home-shot" aria-label={plateTitle(featured)}>
+              <div class="pola-shell">
+                <div class="home-visual work-frame">
+                  <img src={photosFor(featured)[0]} alt="" />
+                </div>
+              </div>
+            </a>
             <div class="pola-shell">
-              <div class="home-visual work-frame">
-                <img src={photosFor(featured)[0]} alt={plateTitle(featured)} />
+              <div class="home-plate">
+                <a href={`/products/${featured.slug}`} class="home-caption">
+                  <span>{artistFor(featured)}</span>
+                  <strong>{plateTitle(featured)}</strong>
+                  <em>{formatPln(featured.price)}</em>
+                </a>
+                {rest.length > 0 && (
+                  <ul class="home-index">
+                    {rest.map((product) => (
+                      <li>
+                        <a href={`/products/${product.slug}`}>
+                          <img src={photosFor(product)[0]} alt="" />
+                          <span>
+                            <small>{artistFor(product)}</small>
+                            {plateTitle(product)}
+                          </span>
+                          <em>{formatPln(product.price)}</em>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
-            <div class="home-caption">
-              <span>{artistFor(featured)}</span>
-              <strong>{plateTitle(featured)}</strong>
-              <em>{formatPln(featured.price)}</em>
-            </div>
-          </a>
+          </div>
         )}
-        {rest.length > 0 && (
-          <ul class="home-index">
-            {rest.map((product) => (
-              <li class="reveal">
-                <a href={`/products/${product.slug}`}>
-                  <img src={photosFor(product)[0]} alt="" />
-                  <span>
-                    <small>{artistFor(product)}</small>
-                    {plateTitle(product)}
-                  </span>
-                  <em>{formatPln(product.price)}</em>
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
+        <section class="home-atelier" aria-labelledby="atelier-title">
+          <div class="home-atelier-copy reveal">
+            <p class="home-kicker">Pracownia</p>
+            <h2 id="atelier-title">Jedna praca. Jedna osoba.</h2>
+            <p>Po sprzedaży schodzi z katalogu. Zostaje tylko u Ciebie.</p>
+            <a href="/kontakt" class="shop-btn">
+              Napisz
+              <span class="btn-orb" aria-hidden="true">↗</span>
+            </a>
+          </div>
+          <ol class="home-facts">
+            <li class="reveal">
+              <div class="pola-shell">
+                <div class="home-fact">
+                  <span>01</span>
+                  <div>
+                    <strong>Egzemplarz</strong>
+                    <p>Obraz albo rysunek. Bez serii i bez dodruku.</p>
+                  </div>
+                </div>
+              </div>
+            </li>
+            <li class="reveal">
+              <div class="pola-shell">
+                <div class="home-fact">
+                  <span>02</span>
+                  <div>
+                    <strong>Medium</strong>
+                    <p>Płótno, papier, pigment. To, co widać, jest całością.</p>
+                  </div>
+                </div>
+              </div>
+            </li>
+            <li class="reveal">
+              <div class="pola-shell">
+                <div class="home-fact">
+                  <span>03</span>
+                  <div>
+                    <strong>Odbiór</strong>
+                    <p>Osobiście albo paczką. Szczegóły po zakupie.</p>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ol>
+        </section>
       </section>
     )
   }

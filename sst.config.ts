@@ -52,6 +52,9 @@ export default $config({
         tokenEncryptionKey,
         furgonetkaAccountId,
       ],
+      server: {
+        install: ["aws4fetch"],
+      },
     });
 
     new sst.aws.Cron("ReservationExpiry", {
@@ -60,7 +63,11 @@ export default $config({
         handler: "apps/web/src/jobs/release-expired-reservations.handler",
         link: [table, koszykSharedKey, adminPassword],
         nodejs: {
-          install: ["@aws-sdk/client-dynamodb", "@aws-sdk/lib-dynamodb"],
+          install: [
+            "@aws-sdk/client-dynamodb",
+            "@aws-sdk/lib-dynamodb",
+            "aws4fetch",
+          ],
         },
       },
     });

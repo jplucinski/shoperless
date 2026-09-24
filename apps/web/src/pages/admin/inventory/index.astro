@@ -23,7 +23,7 @@ const rows = await runAdminQuery(async (services) => {
         Dynamo / SST niedostępne.
       </p>
     ) : (
-      <div class="mb-10 overflow-hidden rounded-2xl border border-line bg-paper">
+      <div class="mb-10 overflow-x-auto rounded-2xl border border-line bg-paper">
         <table class="shop-table">
           <thead>
             <tr>
@@ -67,7 +67,7 @@ const rows = await runAdminQuery(async (services) => {
           {events.length === 0 ? (
             <p class="text-mute">Brak eventów.</p>
           ) : (
-            <div class="overflow-hidden rounded-2xl border border-line bg-paper">
+            <div class="overflow-x-auto rounded-2xl border border-line bg-paper">
               <table class="shop-table">
                 <thead>
                   <tr>

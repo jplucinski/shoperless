@@ -1,12 +1,57 @@
 ---
 import ShopLayout from "../layouts/ShopLayout.astro";
 ---
-<ShopLayout title="Kontakt">
-  <article class="max-w-2xl">
-    <h1 class="m-0 text-4xl font-bold">Kontakt</h1>
-    <p class="text-mute mt-3 mb-8">Pytania o zamówienie, reklamację albo dane osobowe.</p>
-    <p class="m-0 font-bold">LiteShop</p>
-    <p class="text-mute mt-2 mb-0">e-mail: kontakt@localhost</p>
-    <p class="text-mute mt-2 mb-0">Odpowiadamy w dni robocze.</p>
-  </article>
+<ShopLayout title="Kontakt" bleed>
+  <section class="contact">
+    <header class="contact-lead reveal">
+      <p class="home-kicker">Pracownia</p>
+      <h1>Napisz.</h1>
+      <p>Pytania o zamówienie, reklamację albo dane osobowe.</p>
+    </header>
+    <div class="contact-grid">
+      <article class="contact-mail reveal">
+        <div class="pola-shell">
+          <div class="contact-card contact-card-ink">
+            <span>01</span>
+            <div>
+              <p class="contact-label">Skrzynka</p>
+              <strong>LiteShop</strong>
+              <p>Jedna pracownia, jedna skrzynka. Odpowiadamy w dni robocze.</p>
+              <a class="contact-address" href="mailto:kontakt@localhost">kontakt@localhost</a>
+              <a class="shop-btn" href="mailto:kontakt@localhost">
+                Napisz
+                <span class="btn-orb" aria-hidden="true">↗</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </article>
+      <article class="reveal">
+        <div class="pola-shell">
+          <div class="contact-card contact-card-hours">
+            <span>02</span>
+            <div>
+              <strong>Dni robocze</strong>
+              <p>Od poniedziałku do piątku. Weekend zostaje na obraz.</p>
+            </div>
+          </div>
+        </div>
+      </article>
+      <article class="reveal">
+        <div class="pola-shell">
+          <div class="contact-card contact-card-topics">
+            <span>03</span>
+            <div>
+              <strong>Trzy sprawy</strong>
+              <ul>
+                <li>Zamówienie</li>
+                <li>Reklamacja</li>
+                <li>Dane osobowe</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
 </ShopLayout>

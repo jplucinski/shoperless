@@ -19,7 +19,7 @@ if (!order) {
       ← Zamówienia
     </a>
   </p>
-  <h1 class="font-display m-0 text-3xl font-medium">{order.id}</h1>
+  <h1 class="font-display m-0 break-all text-3xl font-medium">{order.id}</h1>
   <p class="text-mute mt-2">
     Płatność: {order.paymentStatus} · Wysyłka: {order.shippingStatus}
     {order.trackingNumber ? ` · ${order.trackingNumber}` : ""}
@@ -32,7 +32,7 @@ if (!order) {
   <ul class="mt-8 mb-6 list-none rounded-2xl border border-line bg-paper p-0">
     {order.items.map((item) => (
       <li class="flex justify-between gap-4 border-b border-line px-5 py-4 last:border-b-0">
-        <span>
+        <span class="min-w-0 break-all">
           {item.sku} × {item.quantity}
         </span>
         <span class="font-semibold">{formatPln(item.unitPrice)}</span>

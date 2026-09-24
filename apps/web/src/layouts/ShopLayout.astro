@@ -32,6 +32,16 @@ const path = Astro.url.pathname;
         <a href="/prace" aria-current={path.startsWith("/prace") ? "page" : undefined}>Prace</a>
         <a href="/kontakt" aria-current={path.startsWith("/kontakt") ? "page" : undefined}>Kontakt</a>
       </nav>
+      <button
+        type="button"
+        class="shop-menu"
+        aria-expanded="false"
+        aria-controls="shop-overlay"
+        aria-label="Menu"
+      >
+        <span></span>
+        <span></span>
+      </button>
       <a href="/cart" class="shop-cart">
         <span>Koszyk</span>
         <span class="shop-cart-count" data-cart-count></span>
@@ -66,19 +76,66 @@ const path = Astro.url.pathname;
         window.addEventListener("storage", sync);
       </script>
     </header>
+    <div id="shop-overlay" class="shop-overlay" hidden>
+      <nav aria-label="Sklep">
+        <a href="/" aria-current={path === "/" ? "page" : undefined}>Start</a>
+        <a href="/prace" aria-current={path.startsWith("/prace") ? "page" : undefined}>Prace</a>
+        <a href="/kontakt" aria-current={path.startsWith("/kontakt") ? "page" : undefined}>Kontakt</a>
+      </nav>
+    </div>
+    <script is:inline>
+      (function () {
+        var btn = document.querySelector(".shop-menu");
+        var overlay = document.getElementById("shop-overlay");
+        if (!btn || !overlay) return;
+        var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        function setOpen(open) {
+          if (open) {
+            overlay.hidden = false;
+            requestAnimationFrame(function () {
+              btn.setAttribute("aria-expanded", "true");
+              document.documentElement.classList.add("shop-menu-open");
+            });
+            return;
+          }
+          btn.setAttribute("aria-expanded", "false");
+          document.documentElement.classList.remove("shop-menu-open");
+          if (reduce) {
+            overlay.hidden = true;
+            return;
+          }
+          window.setTimeout(function () {
+            if (btn.getAttribute("aria-expanded") === "false") overlay.hidden = true;
+          }, 420);
+        }
+        btn.addEventListener("click", function () {
+          setOpen(btn.getAttribute("aria-expanded") !== "true");
+        });
+        overlay.addEventListener("click", function (event) {
+          var target = event.target;
+          if (target && target.closest && target.closest("a")) setOpen(false);
+        });
+        document.addEventListener("keydown", function (event) {
+          if (event.key === "Escape" && btn.getAttribute("aria-expanded") === "true") {
+            setOpen(false);
+            btn.focus();
+          }
+        });
+      })();
+    </script>
     <main
       class:list={[
         "w-full flex-1",
         bleed && "pt-16",
         !bleed && "mx-auto self-center px-5 pt-16 pb-8 md:px-10",
         wide && "flex max-w-4xl flex-col justify-center",
-        !bleed && !wide && "max-w-[1400px]",
+        !bleed && !wide && "max-w-[84rem]",
       ]}
     >
       <slot />
     </main>
     <footer class="mt-auto flex flex-col gap-6 px-4 py-16 md:flex-row md:items-end md:justify-between md:px-10">
-      <a href="/" class="shop-wordmark text-ink pb-1 text-5xl no-underline md:text-6xl">LiteShop</a>
+      <a href="/" class="shop-wordmark text-ink max-w-full pb-1 text-[clamp(2.4rem,12vw,3.75rem)] no-underline md:text-6xl">LiteShop</a>
       <nav class="flex flex-wrap gap-x-6 gap-y-2 text-[0.72rem] font-medium tracking-[0.16em] uppercase">
         <a href="/prace" class="text-mute no-underline hover:text-ink">prace</a>
         <a href="/regulamin" class="text-mute no-underline hover:text-ink">regulamin</a>

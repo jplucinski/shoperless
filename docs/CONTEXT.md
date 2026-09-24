@@ -57,7 +57,7 @@ _Avoid_: basket, session cart (as a server entity)
 
 **Koszyk**:
 Furgonetka's hosted checkout. After the customer completes it, Furgonetka POSTs to LiteShop's **inbound** shop API (shared key). LiteShop does not expose a checkout webhook of its own.
-_Avoid_: LiteShop checkout, payment page, outbound LiteShop webhook
+_Avoid_: LiteShop checkout, payment page, outbound LiteShop webhook, Portmonetka (separate Furgonetka product; storefront uses Koszyk only)
 
 **Inbound event**:
 Authenticated POST from Furgonetka into LiteShop (`ORDER_CREATED`, `PAYMENT_PAID`, `SHIPPING_CHANGED`). Idempotent.

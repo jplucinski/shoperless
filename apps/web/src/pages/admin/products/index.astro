@@ -16,7 +16,7 @@ const listed = await runAdminQuery((services) => services.products.list(SEED_SHO
     ) : listed.length === 0 ? (
       <p class="text-mute mb-8">Brak produktów.</p>
     ) : (
-      <div class="mb-10 overflow-hidden rounded-2xl border border-line bg-paper">
+      <div class="mb-10 overflow-x-auto rounded-2xl border border-line bg-paper">
         <table class="shop-table">
           <thead>
             <tr>
