@@ -47,6 +47,20 @@ export class ProductService {
     return product;
   }
 
+  async reviseListing(
+    shopId: ShopId,
+    sku: string,
+    patch: { name: string; description: string; images: string[] },
+  ): Promise<Product | undefined> {
+    const product = await this.deps.products.getBySku(shopId, sku);
+    if (!product) return undefined;
+    product.name = patch.name;
+    product.description = patch.description;
+    product.images = patch.images;
+    await this.deps.products.save(product);
+    return product;
+  }
+
   async setStatus(shopId: ShopId, sku: string, status: ProductStatus): Promise<Product> {
     const product = await this.deps.products.getBySku(shopId, sku);
     if (!product) {

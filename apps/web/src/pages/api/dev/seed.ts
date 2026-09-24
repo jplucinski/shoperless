@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { SEED_SHOP_ID } from "@liteshop/core";
 import { createServices } from "../../../lib/core.ts";
+import { STUDIO_WORKS } from "../../../lib/studio-works.ts";
 
 export const POST: APIRoute = async () => {
   if (!import.meta.env.DEV) {
@@ -8,17 +9,24 @@ export const POST: APIRoute = async () => {
   }
   const { products, stock } = createServices();
   const existing = await products.listActive(SEED_SHOP_ID);
-  if (!existing.some((p) => p.sku === "TOWEL-BLUE")) {
-    await products.create({
-      shopId: SEED_SHOP_ID,
-      sku: "TOWEL-BLUE",
-      slug: "blue-towel",
-      name: "Blue Towel",
-      description: "Soft",
-      images: [],
-      price: 19900,
-    });
-    await stock.applyDelivery(SEED_SHOP_ID, "TOWEL-BLUE", 10);
+  for (const work of STUDIO_WORKS) {
+    const listing = {
+      name: work.name,
+      description: work.description,
+      images: [...work.images],
+    };
+    if (!existing.some((product) => product.sku === work.sku)) {
+      await products.create({
+        shopId: SEED_SHOP_ID,
+        sku: work.sku,
+        slug: work.slug,
+        price: work.price,
+        ...listing,
+      });
+      await stock.applyDelivery(SEED_SHOP_ID, work.sku, 10);
+    } else {
+      await products.reviseListing(SEED_SHOP_ID, work.sku, listing);
+    }
   }
   return new Response(JSON.stringify({ ok: true }), {
     headers: { "content-type": "application/json" },

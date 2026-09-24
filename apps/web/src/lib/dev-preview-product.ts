@@ -1,14 +1,17 @@
 import { SEED_SHOP_ID, type Product } from "@liteshop/core";
+import { STUDIO_WORKS } from "./studio-works.ts";
 
-export const DEV_PREVIEW_PRODUCT: Product = {
-  id: "prd_preview",
+export const DEV_PREVIEW_PRODUCTS: Product[] = STUDIO_WORKS.map((work) => ({
+  id: `prd_preview_${work.slug}`,
   shopId: SEED_SHOP_ID,
-  sku: "TOWEL-BLUE",
-  slug: "blue-towel",
-  name: "Blue Towel",
-  description: "Soft",
-  images: [],
-  price: 19900,
+  sku: work.sku,
+  slug: work.slug,
+  name: work.name,
+  description: work.description,
+  images: [...work.images],
+  price: work.price,
   status: "active",
-  metadata: {},
-};
+  metadata: { artist: work.artist },
+}));
+
+export const DEV_PREVIEW_PRODUCT = DEV_PREVIEW_PRODUCTS[0]!;

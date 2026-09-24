@@ -1,0 +1,80 @@
+---
+import { formatPln, SEED_SHOP_ID, type Product } from "@liteshop/core";
+import ShopLayout from "../layouts/ShopLayout.astro";
+import { DEV_PREVIEW_PRODUCTS } from "../lib/dev-preview-product.ts";
+import { artistFor, descriptionFor, photosFor, titleFor } from "../lib/product-photos.ts";
+import { STUDIO_WORKS } from "../lib/studio-works.ts";
+import { createServices } from "../lib/core.ts";
+
+let listed: Product[] = [];
+let catalogError = false;
+try {
+  const { products } = createServices();
+  listed = await products.listActive(SEED_SHOP_ID);
+} catch {
+  catalogError = true;
+  if (import.meta.env.DEV) {
+    listed = DEV_PREVIEW_PRODUCTS;
+  }
+}
+
+function plateTitle(product: Product) {
+  return STUDIO_WORKS.find((work) => work.slug === product.slug)?.name ?? titleFor(product);
+}
+---
+<ShopLayout title="Prace" bleed>
+  <header class="plp-head reveal">
+    <p class="home-kicker">Katalog</p>
+    <h1>Prace</h1>
+  </header>
+  {
+    catalogError && listed.length === 0 ? (
+      <p class="border-line bg-paper text-ink mx-5 border px-5 py-4 md:mx-10">
+        Katalog chwilowo niedostępny.
+      </p>
+    ) : listed.length === 0 ? (
+      <p class="text-mute px-5 md:px-10">Brak aktywnych prac.</p>
+    ) : (
+      listed.map((product, index) => (
+        <>
+          {index > 0 && (
+            <div class="pola-between" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          )}
+          <a
+            href={`/products/${product.slug}`}
+            class:list={[
+              "pola-hero",
+              "reveal",
+              index % 2 === 1 && "pola-ice",
+              index % 2 === 1 && "pola-flip",
+            ]}
+          >
+            <div class="pola-shell">
+              <div class="pola-visual work-frame">
+                <img src={photosFor(product)[0]} alt={plateTitle(product)} />
+              </div>
+              <div class="pola-plate">
+                <p class="pola-kicker">{artistFor(product)}</p>
+                {index === 0 ? (
+                  <h2 class="pola-title">*{plateTitle(product)}</h2>
+                ) : (
+                  <h2 class="pola-title">{plateTitle(product)}</h2>
+                )}
+                <p class="pola-note">{descriptionFor(product)}</p>
+                <p class="pola-price">{formatPln(product.price)}</p>
+                <span class="shop-btn">
+                  Zobacz
+                  <span class="btn-orb" aria-hidden="true">↗</span>
+                </span>
+              </div>
+            </div>
+          </a>
+        </>
+      ))
+    )
+  }
+</ShopLayout>

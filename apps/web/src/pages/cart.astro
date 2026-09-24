@@ -6,9 +6,9 @@ import { koszykCheckoutScriptSrc, koszykCheckoutUuid } from "../lib/koszyk.ts";
 const checkoutUuid = koszykCheckoutUuid();
 const checkoutScript = koszykCheckoutScriptSrc(import.meta.env.KOSZYK_ENV);
 ---
-<ShopLayout title="Koszyk" wide>
+<ShopLayout title="Koszyk" bleed>
   <Fragment slot="head">
     {checkoutUuid ? <script src={checkoutScript} defer /> : null}
   </Fragment>
-  <CartView client:load checkoutUuid={checkoutUuid} />
+  <CartView client:only="react" checkoutUuid={checkoutUuid} />
 </ShopLayout>

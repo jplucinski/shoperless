@@ -83,4 +83,29 @@ describe("ProductService", () => {
     expect(shown.status).toBe("active");
     await expect(products.listActive(shopId)).resolves.toHaveLength(1);
   });
+
+  it("revises the public listing of an existing sku", async () => {
+    const products = service();
+    await products.create({
+      shopId,
+      sku: "TOWEL-BLUE",
+      slug: "blue-towel",
+      name: "Blue Towel",
+      description: "Soft",
+      images: [],
+      price: 19900,
+    });
+    const revised = await products.reviseListing(shopId, "TOWEL-BLUE", {
+      name: "Niebieskie pole",
+      description: "Obraz. Jeden egzemplarz.",
+      images: ["/works/cobalt.png"],
+    });
+    expect(revised?.name).toBe("Niebieskie pole");
+    expect(revised?.images).toEqual(["/works/cobalt.png"]);
+    await expect(products.reviseListing(shopId, "MISSING", {
+      name: "x",
+      description: "y",
+      images: [],
+    })).resolves.toBeUndefined();
+  });
 });

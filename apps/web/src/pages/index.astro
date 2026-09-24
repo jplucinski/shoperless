@@ -1,7 +1,9 @@
 ---
 import { formatPln, SEED_SHOP_ID, type Product } from "@liteshop/core";
 import ShopLayout from "../layouts/ShopLayout.astro";
-import { DEV_PREVIEW_PRODUCT } from "../lib/dev-preview-product.ts";
+import { DEV_PREVIEW_PRODUCTS } from "../lib/dev-preview-product.ts";
+import { artistFor, photosFor, titleFor } from "../lib/product-photos.ts";
+import { STUDIO_WORKS } from "../lib/studio-works.ts";
 import { createServices } from "../lib/core.ts";
 
 let listed: Product[] = [];
@@ -12,32 +14,65 @@ try {
 } catch {
   catalogError = true;
   if (import.meta.env.DEV) {
-    listed = [DEV_PREVIEW_PRODUCT];
+    listed = DEV_PREVIEW_PRODUCTS;
   }
 }
+
+const featured = listed[0];
+const rest = listed.slice(1);
+
+function plateTitle(product: Product) {
+  return STUDIO_WORKS.find((work) => work.slug === product.slug)?.name ?? titleFor(product);
+}
 ---
-<ShopLayout title="LiteShop">
+<ShopLayout title="LiteShop" bleed>
   {
     catalogError && listed.length === 0 ? (
-      <p class="border-line bg-paper text-mute border px-5 py-4">
-        Katalog chwilowo niedostępny (Dynamo / SST).
+      <p class="border-line bg-paper text-ink mx-5 border px-5 py-4 md:mx-10">
+        Katalog chwilowo niedostępny.
       </p>
-    ) : listed.length === 0 ? (
-      <p class="text-mute">Brak aktywnych produktów.</p>
     ) : (
-      <ul class="m-0 grid list-none grid-cols-1 gap-10 p-0 sm:grid-cols-2">
-        {listed.map((product) => (
-          <li>
-            <a href={`/products/${product.slug}`} class="text-ink block no-underline">
-              <div class="mb-3 flex aspect-[4/5] items-end bg-[linear-gradient(160deg,#d7e0d4,#c5b7a5)] px-4 py-3">
-                <span class="text-paper text-2xl font-bold">{product.name.slice(0, 1)}</span>
+      <section class="home">
+        <div class="home-lead reveal">
+          <p class="home-kicker">Studio</p>
+          <h1 class="home-title">Obraz i rysunek.</h1>
+          <p class="home-lede">Każda praca jest jedna. Wybierz ją w katalogu albo wejdź od razu w najnowszą.</p>
+          <a href="/prace" class="shop-btn">
+            Katalog
+            <span class="btn-orb" aria-hidden="true">↗</span>
+          </a>
+        </div>
+        {featured && (
+          <a href={`/products/${featured.slug}`} class="home-feature reveal">
+            <div class="pola-shell">
+              <div class="home-visual work-frame">
+                <img src={photosFor(featured)[0]} alt={plateTitle(featured)} />
               </div>
-              <h2 class="m-0 text-base font-bold">{product.name}</h2>
-              <p class="mt-1 mb-0">{formatPln(product.price)}</p>
-            </a>
-          </li>
-        ))}
-      </ul>
+            </div>
+            <div class="home-caption">
+              <span>{artistFor(featured)}</span>
+              <strong>{plateTitle(featured)}</strong>
+              <em>{formatPln(featured.price)}</em>
+            </div>
+          </a>
+        )}
+        {rest.length > 0 && (
+          <ul class="home-index">
+            {rest.map((product) => (
+              <li class="reveal">
+                <a href={`/products/${product.slug}`}>
+                  <img src={photosFor(product)[0]} alt="" />
+                  <span>
+                    <small>{artistFor(product)}</small>
+                    {plateTitle(product)}
+                  </span>
+                  <em>{formatPln(product.price)}</em>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     )
   }
 </ShopLayout>
