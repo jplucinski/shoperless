@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="LiteShop">
+  <rect width="32" height="32" rx="8" fill="#1c1410"/>
+  <path fill="#fff8f4" d="M9 7h6v18H9V7z"/>
+  <path fill="#ff560b" d="M9 19h14v6H9v-6z"/>
+</svg>
