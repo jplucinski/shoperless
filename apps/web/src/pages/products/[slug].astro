@@ -6,11 +6,23 @@ import {
   SEED_SHOP_ID,
   type Product,
 } from "@liteshop/core";
-import { CartButton } from "../../islands/CartButton.tsx";
 import ShopLayout from "../../layouts/ShopLayout.astro";
 import { createServices } from "../../lib/core.ts";
 import { DEV_PREVIEW_PRODUCTS } from "../../lib/dev-preview-product.ts";
-import { artistFor, descriptionFor, photosFor, titleFor } from "../../lib/product-photos.ts";
+import {
+  descriptionFor,
+  descriptionParagraphs,
+  pdpDetails,
+  photosFor,
+  titleFor,
+} from "../../lib/product-photos.ts";
+import {
+  absoluteAssetUrl,
+  altTextFor,
+  productJsonLd,
+  seoDescriptionFor,
+  seoTitleFor,
+} from "../../lib/product-seo.ts";
 
 const slug = Astro.params.slug;
 if (!slug) {
@@ -35,27 +47,62 @@ try {
 }
 const photos = photosFor(product);
 const title = titleFor(product);
-const artist = artistFor(product);
 const description = descriptionFor(product);
-const more = photos.slice(1);
+const paragraphs = descriptionParagraphs(description);
+const details = pdpDetails(product);
+const encodedSku = encodeURIComponent(product.sku);
+const seoTitle = seoTitleFor(product);
+const seoDescription = seoDescriptionFor(product);
+const alt = altTextFor(product);
+const origin = Astro.url.origin;
+const pageUrl = new URL(Astro.url.pathname, origin).href;
+const jsonLd = productJsonLd({
+  product,
+  pageUrl,
+  images: photos.map((src) => absoluteAssetUrl(origin, src)),
+});
 ---
-<ShopLayout title={title} bleed>
+<ShopLayout
+  title={seoTitle}
+  description={seoDescription || undefined}
+  image={photos[0]}
+  jsonLd={jsonLd}
+  bleed
+>
   <article class="pdp">
     <div class="pdp-stage">
-      <div class="pola-shell reveal">
-        <div class="pdp-visual work-frame">
-          <img src={photos[0]} alt={title} class="work-in" />
-        </div>
-      </div>
       {
-        more.length > 0 && (
-          <div class="pdp-film">
-            {more.map((src) => (
-              <div class="pola-shell reveal">
-                <div class="pdp-thumb work-frame">
-                  <img src={src} alt="" />
-                </div>
-              </div>
+        photos.length > 0 && (
+          <div class="pola-shell pdp-stage-shell">
+            <div class="pdp-visual work-frame">
+              <img
+                id="pdp-stage-img"
+                src={photos[0]}
+                alt={photos.length > 1 ? `${alt} — zdjęcie 1` : alt}
+                class="work-in"
+              />
+            </div>
+          </div>
+        )
+      }
+      {
+        photos.length > 1 && (
+          <div class="pdp-film" role="group" aria-label="Galeria">
+            {photos.map((src, index) => (
+              <button
+                type="button"
+                class:list={["pdp-film-btn", index === 0 && "is-active"]}
+                data-pdp-src={src}
+                data-pdp-index={index + 1}
+                aria-pressed={index === 0 ? "true" : "false"}
+                aria-label={`Zdjęcie ${index + 1}`}
+              >
+                <span class="pola-shell pdp-film-frame">
+                  <span class="pdp-thumb work-frame">
+                    <img src={src} alt="" loading="lazy" decoding="async" />
+                  </span>
+                </span>
+              </button>
             ))}
           </div>
         )
@@ -63,11 +110,60 @@ const more = photos.slice(1);
     </div>
     <div class="pdp-copy reveal">
       <a href="/prace" class="pdp-back">Wszystkie prace</a>
-      {artist && <p class="pdp-kicker">{artist}</p>}
       <h1 class="pdp-title">{title}</h1>
       <p class="pdp-price">{formatPln(product.price)}</p>
-      {description && <p class="pdp-note">{description}</p>}
-      <CartButton client:load sku={product.sku} />
+      {
+        paragraphs.length > 0 && (
+          <div class="pdp-description">
+            {paragraphs.map((part) => (
+              <p class="pdp-note">{part}</p>
+            ))}
+          </div>
+        )
+      }
+      {
+        details.length > 0 && (
+          <dl class="pdp-details">
+            {details.map((row) => (
+              <>
+                <dt>{row.label}</dt>
+                <dd>{row.value}</dd>
+              </>
+            ))}
+          </dl>
+        )
+      }
+      <a href={`/cart?add=${encodedSku}`} class="shop-btn no-underline">
+        Do koszyka
+        <span class="btn-orb" aria-hidden="true">↗</span>
+      </a>
     </div>
   </article>
+  {
+    photos.length > 1 && (
+      <script is:inline>
+        (function () {
+          var stage = document.getElementById("pdp-stage-img");
+          var buttons = document.querySelectorAll("[data-pdp-src]");
+          if (!stage || !buttons.length) return;
+          var title = stage.getAttribute("alt") || "";
+          var baseTitle = title.replace(/ — zdjęcie \d+$/, "");
+          buttons.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var src = btn.getAttribute("data-pdp-src");
+              var index = btn.getAttribute("data-pdp-index");
+              if (!src || !index) return;
+              stage.setAttribute("src", src);
+              stage.setAttribute("alt", baseTitle + " — zdjęcie " + index);
+              buttons.forEach(function (other) {
+                var active = other === btn;
+                other.classList.toggle("is-active", active);
+                other.setAttribute("aria-pressed", active ? "true" : "false");
+              });
+            });
+          });
+        })();
+      </script>
+    )
+  }
 </ShopLayout>

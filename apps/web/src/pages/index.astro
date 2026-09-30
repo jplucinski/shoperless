@@ -3,7 +3,6 @@ import { formatPln, SEED_SHOP_ID, type Product } from "@liteshop/core";
 import ShopLayout from "../layouts/ShopLayout.astro";
 import { DEV_PREVIEW_PRODUCTS } from "../lib/dev-preview-product.ts";
 import { artistFor, photosFor, titleFor } from "../lib/product-photos.ts";
-import { STUDIO_WORKS } from "../lib/studio-works.ts";
 import { createServices } from "../lib/core.ts";
 
 let listed: Product[] = [];
@@ -20,18 +19,25 @@ try {
 
 const featured = listed[0];
 const rest = listed.slice(1);
-
-function plateTitle(product: Product) {
-  return STUDIO_WORKS.find((work) => work.slug === product.slug)?.name ?? titleFor(product);
-}
 ---
-<ShopLayout title="LiteShop" bleed>
+<ShopLayout
+  title="LiteShop — obraz i rysunek"
+  description="Każda praca jest jedna. Obraz albo rysunek, bez serii i bez dodruku."
+  bleed
+>
   {
-    catalogError && listed.length === 0 ? (
+    catalogError ? (
       <p class="border-line bg-paper text-ink mx-5 border px-5 py-4 md:mx-10">
         Katalog chwilowo niedostępny.
       </p>
-    ) : (
+    ) : null
+  }
+  {
+    listed.length === 0 && !catalogError ? (
+      <p class="border-line bg-paper text-ink mx-5 border px-5 py-4 md:mx-10">
+        Brak aktywnych prac.
+      </p>
+    ) : listed.length > 0 ? (
       <section class="home">
         <div class="home-lead reveal">
           <p class="home-kicker">Studio</p>
@@ -44,7 +50,7 @@ function plateTitle(product: Product) {
         </div>
         {featured && (
           <div class="home-feature reveal">
-            <a href={`/products/${featured.slug}`} class="home-shot" aria-label={plateTitle(featured)}>
+            <a href={`/products/${featured.slug}`} class="home-shot" aria-label={titleFor(featured)}>
               <div class="pola-shell">
                 <div class="home-visual work-frame">
                   <img src={photosFor(featured)[0]} alt="" />
@@ -55,7 +61,7 @@ function plateTitle(product: Product) {
               <div class="home-plate">
                 <a href={`/products/${featured.slug}`} class="home-caption">
                   <span>{artistFor(featured)}</span>
-                  <strong>{plateTitle(featured)}</strong>
+                  <strong>{titleFor(featured)}</strong>
                   <em>{formatPln(featured.price)}</em>
                 </a>
                 {rest.length > 0 && (
@@ -66,7 +72,7 @@ function plateTitle(product: Product) {
                           <img src={photosFor(product)[0]} alt="" />
                           <span>
                             <small>{artistFor(product)}</small>
-                            {plateTitle(product)}
+                            {titleFor(product)}
                           </span>
                           <em>{formatPln(product.price)}</em>
                         </a>
@@ -125,6 +131,6 @@ function plateTitle(product: Product) {
           </ol>
         </section>
       </section>
-    )
+    ) : null
   }
 </ShopLayout>

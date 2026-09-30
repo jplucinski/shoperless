@@ -3,18 +3,34 @@ import "../styles/global.css";
 
 interface Props {
   title: string;
+  description?: string;
+  image?: string;
+  jsonLd?: Record<string, unknown>;
   wide?: boolean;
   bleed?: boolean;
 }
 
-const { title, wide = false, bleed = false } = Astro.props;
+const { title, description, image, jsonLd, wide = false, bleed = false } = Astro.props;
+const metaDescription = description?.replace(/\s+/g, " ").trim();
 const path = Astro.url.pathname;
+const canonical = new URL(path, Astro.url.origin).href;
+const ogImage = image ? new URL(image, Astro.url.origin).href : undefined;
+const jsonLdText = jsonLd ? JSON.stringify(jsonLd).replace(/</g, "\\u003c") : undefined;
 ---
 <html lang="pl">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
+    {metaDescription ? <meta name="description" content={metaDescription} /> : null}
+    <link rel="canonical" href={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:type" content={jsonLd ? "product" : "website"} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="pl_PL" />
+    {metaDescription ? <meta property="og:description" content={metaDescription} /> : null}
+    {ogImage ? <meta property="og:image" content={ogImage} /> : null}
+    {jsonLdText ? <script type="application/ld+json" set:html={jsonLdText} /> : null}
     <slot name="head" />
   </head>
   <body class="shop flex min-h-[100dvh] flex-col">
