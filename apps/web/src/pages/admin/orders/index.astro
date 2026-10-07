@@ -9,11 +9,11 @@ const listed = await runAdminQuery((services) => services.orders.list(SEED_SHOP_
   <p class="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-moss">Admin</p>
   <h1 class="font-display m-0 mb-8 text-4xl font-medium">Zamówienia</h1>
   {
-    !listed ? (
+    !listed.ok ? (
       <p class="rounded-2xl border border-line bg-paper px-5 py-4 text-mute">
         Dynamo / SST niedostępne.
       </p>
-    ) : listed.length === 0 ? (
+    ) : listed.data.length === 0 ? (
       <p class="text-mute">Brak zamówień.</p>
     ) : (
       <div class="overflow-x-auto rounded-2xl border border-line bg-paper">
@@ -27,7 +27,7 @@ const listed = await runAdminQuery((services) => services.orders.list(SEED_SHOP_
             </tr>
           </thead>
           <tbody>
-            {listed.map((order) => (
+            {listed.data.map((order) => (
               <tr>
                 <td>
                   <a class="font-semibold text-ink no-underline hover:text-moss" href={`/admin/orders/${order.id}`}>

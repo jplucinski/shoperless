@@ -1,26 +1,31 @@
 import type { APIRoute } from "astro";
-import { z } from "zod";
 import { SEED_SHOP_ID } from "@liteshop/core";
+import { z } from "zod";
 import { createServices } from "../../../lib/core.ts";
 import { toHttpError } from "../../../lib/http.ts";
 
 const bodySchema = z.object({
-  sku: z.string().min(1),
-  quantity: z.number().int(),
-  reason: z.enum(["DELIVERY", "ADJUSTMENT"]),
+  items: z.array(
+    z.object({
+      sku: z.string().min(1),
+      quantity: z.number().int().positive(),
+    }),
+  ),
 });
 
 export const POST: APIRoute = async ({ request }) => {
   try {
     const json: unknown = await request.json();
-    const body = bodySchema.parse(json);
-    const { stock } = createServices();
-    if (body.reason === "DELIVERY") {
-      await stock.applyDelivery(SEED_SHOP_ID, body.sku, body.quantity);
-    } else {
-      await stock.applyAdjustment(SEED_SHOP_ID, body.sku, body.quantity);
-    }
-    return new Response(JSON.stringify({ ok: true }), {
+    const { items } = bodySchema.parse(json);
+    const { cart } = createServices();
+    const prepared = await cart.prepare(SEED_SHOP_ID, items);
+    const lines = prepared.lines.map((line) => ({
+      sku: line.sku,
+      name: line.name,
+      unitPrice: line.unitPrice,
+    }));
+    return new Response(JSON.stringify({ lines }), {
+      status: 200,
       headers: { "content-type": "application/json" },
     });
   } catch (error) {

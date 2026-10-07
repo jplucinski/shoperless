@@ -11,11 +11,12 @@ export const POST: APIRoute = async ({ request }) => {
   if (a.length !== b.length || !timingSafeEqual(a, b)) {
     return new Response("Unauthorized", { status: 401 });
   }
+  const url = new URL(request.url);
   return new Response(null, {
     status: 302,
     headers: {
       Location: "/admin",
-      "Set-Cookie": sessionCookieHeader(expected),
+      "Set-Cookie": sessionCookieHeader(expected, url),
     },
   });
 };

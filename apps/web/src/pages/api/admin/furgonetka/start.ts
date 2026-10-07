@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { buildAuthorizeUrl } from "@liteshop/furgonetka";
 import { Resource } from "sst";
+import { oauthStateCookieHeader } from "../../../../lib/session.ts";
 
 export const GET: APIRoute = ({ url }) => {
   const state = crypto.randomUUID();
@@ -14,7 +15,7 @@ export const GET: APIRoute = ({ url }) => {
     status: 302,
     headers: {
       Location: location,
-      "Set-Cookie": `ls_oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
+      "Set-Cookie": oauthStateCookieHeader(state, url),
     },
   });
 };

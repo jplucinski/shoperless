@@ -12,7 +12,7 @@ const data = await runAdminQuery(async (services) => {
     if (available(inv) < 5) lowStock += 1;
   }
   return {
-    todayCount: listed.length,
+    orderCount: listed.length,
     unpaid: listed.filter((o) => o.paymentStatus !== "PAID").length,
     lowStock,
   };
@@ -22,7 +22,7 @@ const data = await runAdminQuery(async (services) => {
   <p class="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-moss">Admin</p>
   <h1 class="font-display m-0 mb-8 text-4xl font-medium">Dashboard</h1>
   {
-    !data ? (
+    !data.ok ? (
       <p class="rounded-2xl border border-line bg-paper px-5 py-4 text-mute">
         Dynamo / SST niedostępne — liczby pojawią się po `sst dev`.
       </p>
@@ -30,15 +30,15 @@ const data = await runAdminQuery(async (services) => {
       <ul class="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-3">
         <li class="rounded-2xl border border-line bg-paper px-5 py-6">
           <p class="text-mute m-0 text-sm font-semibold uppercase tracking-[0.08em]">Zamówienia</p>
-          <p class="font-display m-0 mt-2 text-3xl">{data.todayCount}</p>
+          <p class="font-display m-0 mt-2 text-3xl">{data.data.orderCount}</p>
         </li>
         <li class="rounded-2xl border border-line bg-paper px-5 py-6">
           <p class="text-mute m-0 text-sm font-semibold uppercase tracking-[0.08em]">Nieopłacone</p>
-          <p class="font-display m-0 mt-2 text-3xl">{data.unpaid}</p>
+          <p class="font-display m-0 mt-2 text-3xl">{data.data.unpaid}</p>
         </li>
         <li class="rounded-2xl border border-line bg-paper px-5 py-6">
           <p class="text-mute m-0 text-sm font-semibold uppercase tracking-[0.08em]">Niski stan</p>
-          <p class="font-display m-0 mt-2 text-3xl">{data.lowStock}</p>
+          <p class="font-display m-0 mt-2 text-3xl">{data.data.lowStock}</p>
         </li>
       </ul>
     )

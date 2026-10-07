@@ -47,31 +47,34 @@ function readInitialCart(): CartItem[] {
 export function CartView(props: { checkoutUuid?: string }) {
   const [items, setItems] = useState<CartItem[]>(readInitialCart);
   const [catalog, setCatalog] = useState<Record<string, CatalogLine>>({});
+  const [quoteError, setQuoteError] = useState<string | null>(null);
 
   useEffect(() => {
     const lines = readCart();
     if (lines.length === 0) return;
-    void fetch("/api/checkout/prepare", {
+    void fetch("/api/checkout/quote", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ items: lines }),
     })
       .then(async (response) => {
-        if (!response.ok) return;
         const body = (await response.json()) as {
-          products?: { sku: string; name: string; price: number }[];
+          lines?: { sku: string; name: string; unitPrice: number }[];
+          message?: string;
         };
-        if (!body.products) return;
+        if (!response.ok) {
+          setQuoteError(body.message ?? "Nie udało się wycenić koszyka.");
+          return;
+        }
+        if (!body.lines) return;
         const next: Record<string, CatalogLine> = {};
-        for (const product of body.products) {
-          next[product.sku] = {
-            name: product.name,
-            unitPrice: Math.round(product.price * 100),
-          };
+        for (const line of body.lines) {
+          next[line.sku] = { name: line.name, unitPrice: line.unitPrice };
         }
         setCatalog(next);
+        setQuoteError(null);
       })
-      .catch(() => undefined);
+      .catch(() => setQuoteError("Nie udało się wycenić koszyka."));
   }, []);
 
   function persist(next: CartItem[]) {
@@ -84,11 +87,14 @@ export function CartView(props: { checkoutUuid?: string }) {
       items.map((item) => {
         const meta = catalog[item.sku];
         const art = studioBySku(item.sku);
-        const unitPrice = meta?.unitPrice ?? art?.price;
+        const unitPrice = meta?.unitPrice;
         const catalogName = meta?.name?.trim();
         return {
           ...item,
-          title: art?.name ?? (catalogName && catalogName !== item.sku ? catalogName : item.sku),
+          title:
+            (catalogName && catalogName !== item.sku ? catalogName : undefined) ??
+            art?.name ??
+            item.sku,
           artist: art?.artist,
           photo: art?.images[0],
           unitPrice,
@@ -121,6 +127,7 @@ export function CartView(props: { checkoutUuid?: string }) {
     <div className="cart-page">
       <h1 className="cart-title">Koszyk</h1>
       <p className="text-mute cart-lead">{prace(count)}</p>
+      {quoteError ? <p className="cart-quote-error">{quoteError}</p> : null}
       <div className="cart-layout">
         <ul className="cart-lines">
           {lines.map((line) => (

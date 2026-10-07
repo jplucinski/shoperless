@@ -2,6 +2,7 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import {
   CartService,
+  DomainError,
   DynamoInventoryRepository,
   DynamoOrderRepository,
   DynamoPrepareSnapshotRepository,
@@ -51,12 +52,15 @@ export function createServices() {
   };
 }
 
+export type AdminQueryResult<T> = { ok: true; data: T } | { ok: false };
+
 export async function runAdminQuery<T>(
   fn: (services: ReturnType<typeof createServices>) => Promise<T>,
-): Promise<T | undefined> {
+): Promise<AdminQueryResult<T>> {
   try {
-    return await fn(createServices());
-  } catch {
-    return undefined;
+    return { ok: true, data: await fn(createServices()) };
+  } catch (error) {
+    if (error instanceof DomainError) throw error;
+    return { ok: false };
   }
 }

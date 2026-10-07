@@ -4,7 +4,9 @@ export const STUDIO_WORKS = [
     slug: "blue-towel",
     name: "Niebieskie pole",
     artist: "Lena Wrzesień",
-    description: "Obraz. Jeden egzemplarz.",
+    medium: "Obraz",
+    description:
+      "Obraz. Jeden egzemplarz.\n\nPo sprzedaży schodzi z katalogu. Zostaje tylko u Ciebie.",
     images: ["/works/cobalt.png", "/works/plaster.png"],
     price: 19900,
   },
@@ -13,7 +15,9 @@ export const STUDIO_WORKS = [
     slug: "sand-towel",
     name: "Szary rysunek",
     artist: "Oskar Bielik",
-    description: "Rysunek węglem. Jeden egzemplarz.",
+    medium: "Rysunek węglem",
+    description:
+      "Rysunek węglem. Jeden egzemplarz.\n\nPo sprzedaży schodzi z katalogu. Zostaje tylko u Ciebie.",
     images: ["/works/charcoal.png", "/works/plaster.png"],
     price: 17900,
   },

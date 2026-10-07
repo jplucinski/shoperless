@@ -4,12 +4,18 @@ import type { APIRoute } from "astro";
 import { SEED_SHOP_ID, keys } from "@liteshop/core";
 import { encryptRefreshToken, isAllowedAccount, parseAccessTokenAccountId, parseTokenResponse } from "@liteshop/furgonetka";
 import { Resource } from "sst";
-import { sessionCookieHeader } from "../../../../lib/session.ts";
+import {
+  adminSecret,
+  clearOAuthStateCookieHeader,
+  OAUTH_STATE_COOKIE,
+  secureCompare,
+  sessionCookieHeader,
+} from "../../../../lib/session.ts";
 
 export const GET: APIRoute = async ({ url, cookies }) => {
   const state = url.searchParams.get("state");
-  const expected = cookies.get("ls_oauth_state")?.value;
-  if (!state || !expected || state !== expected) {
+  const expected = cookies.get(OAUTH_STATE_COOKIE)?.value;
+  if (!state || !expected || !secureCompare(state, expected)) {
     return new Response("Invalid state", { status: 400 });
   }
   const code = url.searchParams.get("code");
@@ -59,11 +65,9 @@ export const GET: APIRoute = async ({ url, cookies }) => {
       },
     }),
   );
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: "/admin",
-      "Set-Cookie": sessionCookieHeader(Resource.AdminPassword.value),
-    },
-  });
+  const headers = new Headers();
+  headers.set("Location", "/admin");
+  headers.append("Set-Cookie", sessionCookieHeader(adminSecret(), url));
+  headers.append("Set-Cookie", clearOAuthStateCookieHeader(url));
+  return new Response(null, { status: 302, headers });
 };

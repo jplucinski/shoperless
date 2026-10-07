@@ -11,7 +11,7 @@ export const DEV_PREVIEW_PRODUCTS: Product[] = STUDIO_WORKS.map((work) => ({
   images: [...work.images],
   price: work.price,
   status: "active",
-  metadata: { artist: work.artist },
+  metadata: { artist: work.artist, medium: work.medium },
 }));
 
 export const DEV_PREVIEW_PRODUCT = DEV_PREVIEW_PRODUCTS[0]!;

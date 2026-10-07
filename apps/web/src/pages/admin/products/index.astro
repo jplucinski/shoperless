@@ -9,11 +9,11 @@ const listed = await runAdminQuery((services) => services.products.list(SEED_SHO
   <p class="mb-2 text-sm font-semibold uppercase tracking-[0.18em] text-moss">Admin</p>
   <h1 class="font-display m-0 mb-8 text-4xl font-medium">Produkty</h1>
   {
-    !listed ? (
+    !listed.ok ? (
       <p class="mb-8 rounded-2xl border border-line bg-paper px-5 py-4 text-mute">
         Dynamo / SST niedostępne — formularz nie zapisze.
       </p>
-    ) : listed.length === 0 ? (
+    ) : listed.data.length === 0 ? (
       <p class="text-mute mb-8">Brak produktów.</p>
     ) : (
       <div class="mb-10 overflow-x-auto rounded-2xl border border-line bg-paper">
@@ -28,7 +28,7 @@ const listed = await runAdminQuery((services) => services.products.list(SEED_SHO
             </tr>
           </thead>
           <tbody>
-            {listed.map((product) => (
+            {listed.data.map((product) => (
               <tr>
                 <td>{product.sku}</td>
                 <td>{product.name}</td>
@@ -51,6 +51,7 @@ const listed = await runAdminQuery((services) => services.products.list(SEED_SHO
       </div>
     )
   }
+  <p id="product-form-error" class="text-mute mb-4 hidden" role="alert"></p>
   <form id="product-form" class="grid max-w-lg gap-3 rounded-2xl border border-line bg-paper p-6">
     <h2 class="font-display m-0 text-2xl font-medium">Nowy produkt</h2>
     <input class="shop-input" name="sku" placeholder="SKU" required />
@@ -62,35 +63,55 @@ const listed = await runAdminQuery((services) => services.products.list(SEED_SHO
   </form>
   <script is:inline>
     const form = document.getElementById("product-form");
+    const formError = document.getElementById("product-form-error");
+    function showFormError(message) {
+      if (!formError) return;
+      formError.textContent = message;
+      formError.classList.remove("hidden");
+    }
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      if (formError) formError.classList.add("hidden");
       const data = new FormData(form);
-      await fetch("/api/admin/products", {
+      const response = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({
+          action: "create",
           sku: data.get("sku"),
           slug: data.get("slug"),
           name: data.get("name"),
           description: data.get("description") ?? "",
-          priceZloty: Number(data.get("priceZloty")),
+          priceZloty: String(data.get("priceZloty") ?? ""),
         }),
       });
-      location.reload();
+      if (response.ok) {
+        location.reload();
+        return;
+      }
+      const body = await response.json().catch(() => ({}));
+      showFormError(body.message ?? "Nie udało się dodać produktu.");
     });
     for (const button of document.querySelectorAll("[data-sku][data-status]")) {
       button.addEventListener("click", async () => {
-        await fetch("/api/admin/products", {
+        if (formError) formError.classList.add("hidden");
+        const response = await fetch("/api/admin/products", {
           method: "POST",
           headers: { "content-type": "application/json" },
           credentials: "same-origin",
           body: JSON.stringify({
+            action: "setStatus",
             sku: button.getAttribute("data-sku"),
             status: button.getAttribute("data-status"),
           }),
         });
-        location.reload();
+        if (response.ok) {
+          location.reload();
+          return;
+        }
+        const body = await response.json().catch(() => ({}));
+        showFormError(body.message ?? "Nie udało się zmienić statusu.");
       });
     }
   </script>

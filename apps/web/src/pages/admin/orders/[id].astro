@@ -1,46 +1,65 @@
----
-import { formatPln, SEED_SHOP_ID } from "@liteshop/core";
-import { furgonetkaPanelUrl } from "@liteshop/furgonetka";
-import AdminLayout from "../../../layouts/AdminLayout.astro";
-import { runAdminQuery } from "../../../lib/core.ts";
-
-const id = Astro.params.id;
-if (!id) {
-  return new Response("Not found", { status: 404 });
-}
-const order = await runAdminQuery((services) => services.orders.get(SEED_SHOP_ID, id));
-if (!order) {
-  return Astro.redirect("/admin/orders");
-}
----
-<AdminLayout title={`Zamówienie ${order.id}`}>
-  <p class="mb-6">
-    <a href="/admin/orders" class="text-sm font-semibold text-mute no-underline hover:text-ink">
-      ← Zamówienia
-    </a>
-  </p>
-  <h1 class="font-display m-0 break-all text-3xl font-medium">{order.id}</h1>
-  <p class="text-mute mt-2">
-    Płatność: {order.paymentStatus} · Wysyłka: {order.shippingStatus}
-    {order.trackingNumber ? ` · ${order.trackingNumber}` : ""}
-  </p>
-  <p class="text-mute mt-2 text-sm">
-    {order.shippingAddress.name} {order.shippingAddress.surname}<br />
-    {order.shippingAddress.street}, {order.shippingAddress.postcode} {order.shippingAddress.city}<br />
-    {order.shippingAddress.email}
-  </p>
-  <ul class="mt-8 mb-6 list-none rounded-2xl border border-line bg-paper p-0">
-    {order.items.map((item) => (
-      <li class="flex justify-between gap-4 border-b border-line px-5 py-4 last:border-b-0">
-        <span class="min-w-0 break-all">
-          {item.sku} × {item.quantity}
-        </span>
-        <span class="font-semibold">{formatPln(item.unitPrice)}</span>
-      </li>
-    ))}
-  </ul>
-  <p class="mb-8 text-xl font-semibold">Suma: {formatPln(order.total)}</p>
-  <a class="shop-btn no-underline" href={furgonetkaPanelUrl(import.meta.env.KOSZYK_ENV)}>
-    Panel Furgonetki (brak deep-link zamówienia)
-  </a>
-</AdminLayout>
+---
+import { DomainError, formatPln, SEED_SHOP_ID } from "@liteshop/core";
+import { furgonetkaPanelUrl } from "@liteshop/furgonetka";
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+import { runAdminQuery } from "../../../lib/core.ts";
+
+const id = Astro.params.id;
+if (!id) {
+  return new Response("Not found", { status: 404 });
+}
+
+let orderResult;
+try {
+  orderResult = await runAdminQuery((services) => services.orders.get(SEED_SHOP_ID, id));
+} catch (error) {
+  if (error instanceof DomainError && error.code === "ORDER_NOT_FOUND") {
+    return Astro.redirect("/admin/orders");
+  }
+  throw error;
+}
+
+if (!orderResult.ok) {
+  return (
+    <AdminLayout title="Zamówienie">
+      <p class="rounded-2xl border border-line bg-paper px-5 py-4 text-mute">
+        Dynamo / SST niedostępne.
+      </p>
+    </AdminLayout>
+  );
+}
+
+const order = orderResult.data;
+---
+<AdminLayout title={`Zamówienie ${order.id}`}>
+  <p class="mb-6">
+    <a href="/admin/orders" class="text-sm font-semibold text-mute no-underline hover:text-ink">
+      ← Zamówienia
+    </a>
+  </p>
+  <h1 class="font-display m-0 break-all text-3xl font-medium">{order.id}</h1>
+  <p class="text-mute mt-2">
+    Płatność: {order.paymentStatus} · Wysyłka: {order.shippingStatus}
+    {order.trackingNumber ? ` · ${order.trackingNumber}` : ""}
+  </p>
+  <p class="text-mute mt-2 text-sm">
+    {order.shippingAddress.name} {order.shippingAddress.surname}<br />
+    {order.shippingAddress.street}, {order.shippingAddress.postcode} {order.shippingAddress.city}<br />
+    {order.shippingAddress.email}
+  </p>
+  <ul class="mt-8 mb-6 list-none rounded-2xl border border-line bg-paper p-0">
+    {order.items.map((item) => (
+      <li class="flex justify-between gap-4 border-b border-line px-5 py-4 last:border-b-0">
+        <span class="min-w-0 break-all">
+          {item.sku} × {item.quantity}
+        </span>
+        <span class="font-semibold">{formatPln(item.unitPrice)}</span>
+      </li>
+    ))}
+  </ul>
+  <p class="mb-8 text-xl font-semibold">Suma: {formatPln(order.total)}</p>
+  <a class="shop-btn no-underline" href={furgonetkaPanelUrl(import.meta.env.KOSZYK_ENV)}>
+    Panel Furgonetki (brak deep-link zamówienia)
+  </a>
+</AdminLayout>
+
